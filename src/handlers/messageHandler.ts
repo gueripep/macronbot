@@ -1,6 +1,6 @@
 import { Message } from "discord.js";
 import { CHANNEL_IDS, randomReplies } from "../config.js";
-import { queryOllama } from "../services/ollama.js";
+import { queryMacronAI } from "../services/ollama.js";
 
 export async function handleMessage(msg: Message, client: any): Promise<void> {
   if (msg.mentions.has(client.user!) && msg.author.id !== client.user?.id) {
@@ -16,7 +16,7 @@ export async function handleMessage(msg: Message, client: any): Promise<void> {
       await msg.channel.sendTyping();
     }
 
-    if (Math.random() < 0.1) {
+    if (Math.random() < 0) {
       const randomReply = randomReplies[Math.floor(Math.random() * randomReplies.length)];
       await msg.reply(randomReply);
     } else {
@@ -26,7 +26,7 @@ export async function handleMessage(msg: Message, client: any): Promise<void> {
         .map((m: Message): string => `${m.author.username}: ${m.content}`)
         .join("\n");
       
-      const response = await queryOllama(pastMessages, msg, client.user?.username || "MacronBot");
+      const response = await queryMacronAI(pastMessages, msg, client.user?.username || "MacronBot");
       await msg.reply(response);
     }
   }

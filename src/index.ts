@@ -15,11 +15,34 @@ const client = new Client({
 
 client.once("ready", (): void => {
   console.log(`Logged in as ${client.user?.tag}`);
-  scheduleDailyMessages(client);
+  try {
+    scheduleDailyMessages(client);
+  } catch (error) {
+    console.error("Error scheduling daily messages:", error);
+  }
 });
 
 client.on("messageCreate", async (msg) => {
-  await handleMessage(msg, client);
+  try {
+    await handleMessage(msg, client);
+  } catch (error) {
+    console.error("Error handling message:", error);
+  }
+});
+
+// Handle Discord client errors
+client.on("error", (error) => {
+  console.error("Discord client error:", error);
+});
+
+// Handle uncaught exceptions
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception:", error);
+});
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled rejection at:", promise, "reason:", reason);
 });
 
 const token = process.env.DISCORD_TOKEN;
@@ -28,4 +51,8 @@ if (!token) {
   process.exit(1);
 }
 
-client.login(token);
+// Add error handling for login
+client.login(token).catch((error) => {
+  console.error("Failed to login to Discord:", error);
+  process.exit(1);
+});
