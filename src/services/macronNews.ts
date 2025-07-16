@@ -5,22 +5,8 @@ import fs from "fs";
 import path from "path";
 import { BaseMessageOptions, AttachmentBuilder } from "discord.js";
 import { scrapeArticle } from "./scraper";
+import { RssFeed, RssItem } from "../types";
 
-export interface RssItem {
-  title: string;
-  link: string;
-  pubDate: string;
-  description?: string;
-  image?: string;
-  [key: string]: any;
-}
-
-export interface RssFeed {
-  title: string;
-  link: string;
-  description: string;
-  items: RssItem[];
-}
 
 export async function fetchRssFeed(): Promise<RssFeed> {
   const url = "https://www.francetvinfo.fr/titres.rss";
@@ -65,7 +51,7 @@ async function getNewsString(mostImportantNews: RssItem[]) {
 async function getNewsImages(rssItems: RssItem[]): Promise<string[]> {
   //save the image locally from the rss feed returns the local path list
   const imagePaths: string[] = [];
-  const imageDir = path.join(process.cwd(), "images");
+  const imageDir = path.join(process.cwd(), "assets/images");
 
   // Create images directory if it doesn't exist
   if (!fs.existsSync(imageDir)) {
@@ -95,7 +81,7 @@ async function getNewsImages(rssItems: RssItem[]): Promise<string[]> {
       console.error(`Error downloading image for news ${i + 1}:`, error);
     }
   }
-  imagePaths.push(path.join(process.cwd(), "images/logo_macronnews.png")); // Add a default image if needed
+  imagePaths.push(path.join(process.cwd(), "assets/images/logo_macronnews.png")); // Add a default image if needed
   return imagePaths;
 }
 
@@ -109,16 +95,6 @@ export async function getMacronNews(): Promise<BaseMessageOptions> {
   const message: BaseMessageOptions = {
     content: macronNews,
     files: images.map((imagePath) => new AttachmentBuilder(imagePath)),
-    // embeds: mostImportantNews.map((news, index) => ({
-    //   color: 0x0099FF, // Blue color for embeds
-    //   title: news.title,
-    //   description: news.description || "Pas de description disponible.",
-    //   url: news.link,
-    //   image: images[index] ? {
-    //     url: `attachment://${path.basename(images[index])}`
-    //   } : undefined,
-    //   timestamp: new Date(news.pubDate).toISOString(),
-    // })).filter(embed => embed.image) // Only include embeds that have images
   };
   
   console.log("Macron's response:", macronNews);

@@ -1,7 +1,6 @@
 import fetch from "node-fetch";
 import { Message } from "discord.js";
-import { OllamaResponse, OllamaRequest } from "../types.js";
-import { Article } from "./scraper.js";
+import { OllamaResponse, OllamaRequest, Article, RedditRssItem } from "../types.js";
 
 // Generic method to send any prompt to the AI
 export async function queryOllamaWithPrompt(prompt: string, model = "mistral:7b"): Promise<string> {
@@ -18,7 +17,11 @@ export async function queryOllamaWithPrompt(prompt: string, model = "mistral:7b"
   });
 
   const data = (await response.json()) as OllamaResponse;
-  const trimmedResponse = data.response.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+  // Remove <think> tags and trim the response
+  let trimmedResponse = data.response.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+  // Remove the quotes if any
+  trimmedResponse = trimmedResponse.replace(/^"|"$/g, '').trim();
+
   return trimmedResponse;
 }
 
@@ -50,10 +53,41 @@ export async function queryMacronNews(article: Article): Promise<string> {
     FIN DE L'ARTICLE
 
     Tu es Emmanuel Macron, président de la République française. En français et en moins de 200 mots, fais un reportage expliquant ce qu'il se passe et donne ton avis pour ta chaîne d'information : Macron News.
-    Commence le message par un truc du genre "Bonjour à tous, bienvenue sur Macron News !"
-    Le ton doit être fluide et présidentiel. Ne dis rien d'autre que ce qui est demandé.`;
-  console.log(prompt);
+    Fais genre que ce qu'il se passe t'énerve légèrement tout en gardant un ton Présidentiel. Si une personne autre que Emmanuel Macron est responsable de ce qu'il se passe, mets la faute sur elle.
+    Commence le message par un truc du genre "Bonjour à tous, bienvenue sur Macron News ! Aujourd'hui ..."
+    Ne dis rien d'autre que ce qui est demandé.`;
   return queryOllamaWithPrompt(prompt, "gemma3:12b");
 }
 
+//gets the list of sticker mentionned in a message
+export async function queryAITickerListFromRedditPost(redditPost: RedditRssItem): Promise<string> {
+  const prompt = `
+    Here is a Reddit post:
+    Title: ${redditPost.title}
+    Date: ${redditPost.published}
+    Content: ${redditPost.content}
+    END OF REDDIT POST
+    You are a financial AI assistant. Extract the list of stock tickers mentioned in the post.
+    Return the list of tickers in a comma-separated format, without any additional text or explanation.
+    If no tickers are mentioned, return "No tickers found".`;
 
+  const response = await queryOllamaWithPrompt(prompt, "gemma3:12b");
+  // Clean up the response
+  const tickers = response
+    .split(",")
+    .map(ticker => ticker.trim().toUpperCase())
+    .filter(ticker => ticker.length > 0 && /^[A-Z]+$/.test(ticker));
+  return tickers.length > 0 ? tickers.join(", ") : "No tickers found";
+}
+
+export async function getStrengthAndWeaknessesFromMDNA(mdna: string): Promise<string> {
+  const prompt = `
+    Here is the Management's Discussion and Analysis (MD&A) section of a company's 10-K report:
+    ${mdna}
+    Your task is to analyze the MD&A and extract the company's strengths and weaknesses.
+    Provide a complete summary of the strengths and weaknesses in bullet points format.
+    Please use the exact numbers provided in the document to back up your claims.
+    Do NOT add any info not in the MD&A.`;
+
+  return queryOllamaWithPrompt(prompt, "mistral:7b");
+}

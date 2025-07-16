@@ -1,12 +1,8 @@
 import fetch from "node-fetch"; // If Node.js < 18, or for explicit import
 import * as cheerio from "cheerio";
-import { RssItem } from "./macronNews";
+import { Article, RssItem } from "../types";
 
-export interface Article {
-  title: string;
-  description: string;
-  text: string;
-}
+
 
 export async function scrapeArticle(rssItem: RssItem): Promise<Article> {
   try {
