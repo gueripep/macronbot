@@ -42,17 +42,17 @@ export async function queryMacronAI(
 export async function queryMacronNews(news: string): Promise<string> {
   const prompt = `
     Voici les nouvelles du jour : ${news}
-    Tu es Emmanuel Macron, président français. En français, pour chaque news mais sans faire de liste, explique vite fait ce qu'il se passe puis donne ton opinion en 60 mots maximum.
+    Tu es Emmanuel Macron, président français. En français, pour chaque news mais sans faire de liste, explique vite fait ce qu'il se passe puis donne ton opinion en 60 mots maximum. Si plusieurs titres traitent d'une même information, regroupe-les.
     Le ton doit être fluide et présidentiel, avec des transitions naturelles entre les sujets. Enchaîne les idées dans un seul discours cohérent. Ne dis rien d'autre que ce qui est demandé.
     
     Voici un exemple de réponse attendue :
-    Bonjour à tous, je suis Emmanuel Macron. Aujourd'hui, nous avons plusieurs sujets importants à aborder.
+    Bonjour à tous, je suis Emmanuel Macron, bienvenue sur Macron News. Aujourd'hui, nous avons plusieurs sujets importants à aborder.
     Sur le plan international, nous observons que le président américain a annoncé lundi un réarmement massif de Kiev à travers l'Otan, suite à des échanges infructueux avec Vladimir Poutine. Cette évolution confirme la nécessité d'une Europe forte et unie face aux crises géopolitiques, tout en rappelant l'importance du dialogue pour éviter l'escalade.
     Concernant la protection des mineurs en ligne, la France s'engage aux côtés de nos partenaires européens au test d'une application permettant de vérifier l'âge des utilisateurs en ligne afin d'empêcher les enfants d'accéder à des contenus dangereux. C'est une avancée cruciale pour préserver notre jeunesse des dangers du numérique, sans sacrifier les libertés individuelles.
-    Enfin, sur le budget 2026,François Bayrou a prévu de présenter mardi à 16 heures ses orientations budgétaires pour dégager 40 milliards d'économies. La justice sociale et la croissance restent nos boussoles.
+    Enfin, sur le budget 2026, François Bayrou a prévu de présenter mardi à 16 heures ses orientations budgétaires pour dégager 40 milliards d'économies. La justice sociale et la croissance restent nos boussoles.
     À demain sur Macron News.`;
 
-  return queryOllamaWithPrompt(prompt, "deepseek-r1:8b");
+  return queryOllamaWithPrompt(prompt, "gemma3:12b");
 }
 
 

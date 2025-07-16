@@ -1,13 +1,13 @@
-import { Client, GatewayIntentBits, TextChannel } from 'discord.js';
-import { fetchRssFeed, getMacronNews } from '../src/services/macronNews.ts';
-import { CHANNEL_IDS, testChannelId } from '../src/config.ts';
-import dotenv from 'dotenv';
+import { Client, GatewayIntentBits, TextChannel } from "discord.js";
+import { fetchRssFeed, getMacronNews } from "../src/services/macronNews.ts";
+import { CHANNEL_IDS, testChannelId } from "../src/config.ts";
+import dotenv from "dotenv";
 
 dotenv.config();
 
 async function testDailyMessage() {
   console.log("Testing daily message function...");
-  
+
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -16,9 +16,9 @@ async function testDailyMessage() {
     ],
   });
 
-  client.once('ready', async () => {
+  client.once("ready", async () => {
     console.log(`Logged in as ${client.user?.tag}!`);
-    
+
     try {
       const channel = client.channels.cache.get(testChannelId) as TextChannel;
       if (channel) {
@@ -27,7 +27,6 @@ async function testDailyMessage() {
         console.log(`RSS feed title: ${macronNews}`);
         await channel.send(macronNews);
 
-
         console.log("Message sent successfully!");
       } else {
         console.log("Channel not found");
@@ -35,7 +34,7 @@ async function testDailyMessage() {
     } catch (error) {
       console.error("Error:", error);
     }
-    
+
     client.destroy();
   });
 

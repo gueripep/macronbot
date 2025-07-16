@@ -9,9 +9,6 @@ export async function handleMessage(msg: Message, client: any): Promise<void> {
       return;
     }
     
-    const content = msg.content.replace(`<@${client.user?.id}>`, "").trim();
-    if (!content) return;
-
     if (msg.channel.isTextBased() && 'sendTyping' in msg.channel) {
       await msg.channel.sendTyping();
     }

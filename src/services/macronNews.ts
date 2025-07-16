@@ -1,12 +1,16 @@
 import fetch from "node-fetch";
 import { parseStringPromise } from "xml2js";
-import { queryMacronNews } from "./ollama";
+import { queryMacronNews as queryMacronAINews } from "./ollama";
+import fs from "fs";
+import path from "path";
+import { BaseMessageOptions, AttachmentBuilder } from "discord.js";
 
 export interface RssItem {
   title: string;
   link: string;
   pubDate: string;
   description?: string;
+  image?: string;
   [key: string]: any;
 }
 
@@ -35,6 +39,7 @@ export async function fetchRssFeed(): Promise<RssFeed> {
       link: item.link,
       pubDate: item.pubDate,
       description: item.description,
+      image: item.enclosure.$.url,
     })),
   };
 }
@@ -44,17 +49,77 @@ async function fetchMostImportantNews(newsNb: number): Promise<RssItem[]> {
   return rssFeed.items.slice(0, newsNb);
 }
 
-async function getNewsString() {
-  const mostImportantNews = await fetchMostImportantNews(3);
+async function getNewsString(mostImportantNews: RssItem[]) {
+	
   return mostImportantNews
-    .map((news, idx) => `News numéro ${idx + 1} :\n${news.title}\n${news.description || "Pas de description disponible."}`)
+    .map(
+      (news, idx) =>
+        `News numéro ${idx + 1} :\n${news.title}\n${
+          news.description || "Pas de description disponible."
+        }`
+    )
     .join("\n\n");
 }
 
-export async function getMacronNews(): Promise<string> {
-  const mostImportantNewsString = await getNewsString();
+async function getNewsImages(rssItems: RssItem[]): Promise<string[]> {
+  //save the image locally from the rss feed returns the local path list
+  const imagePaths: string[] = [];
+  const imageDir = path.join(process.cwd(), "images");
 
-  const macronNews = await queryMacronNews(mostImportantNewsString);
+  // Create images directory if it doesn't exist
+  if (!fs.existsSync(imageDir)) {
+    fs.mkdirSync(imageDir, { recursive: true });
+  }
+
+  for (let i = 0; i < rssItems.length; i++) {
+    const item = rssItems[i];
+
+    try {
+      let imageUrl = item.image;
+
+      if (imageUrl) {
+        const response = await fetch(imageUrl);
+        if (response.ok) {
+          const buffer = await response.arrayBuffer();
+          const extension = path.extname(new URL(imageUrl).pathname) || ".jpg";
+          const filename = `news_${i + 1}_${Date.now()}${extension}`;
+          const filePath = path.join(imageDir, filename);
+
+          fs.writeFileSync(filePath, Buffer.from(buffer));
+          imagePaths.push(filePath);
+          console.log(`Image saved: ${filePath}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error downloading image for news ${i + 1}:`, error);
+    }
+  }
+  imagePaths.push(path.join(process.cwd(), "images/logo_macronnews.png")); // Add a default image if needed
+  return imagePaths;
+}
+
+export async function getMacronNews(): Promise<BaseMessageOptions> {
+  const mostImportantNews = await fetchMostImportantNews(3);
+  const images = await getNewsImages(mostImportantNews);
+  const mostImportantNewsString = await getNewsString(mostImportantNews);
+  
+  const macronNews = await queryMacronAINews(mostImportantNewsString);
+  
+  const message: BaseMessageOptions = {
+    content: macronNews,
+    files: images.map((imagePath) => new AttachmentBuilder(imagePath)),
+    // embeds: mostImportantNews.map((news, index) => ({
+    //   color: 0x0099FF, // Blue color for embeds
+    //   title: news.title,
+    //   description: news.description || "Pas de description disponible.",
+    //   url: news.link,
+    //   image: images[index] ? {
+    //     url: `attachment://${path.basename(images[index])}`
+    //   } : undefined,
+    //   timestamp: new Date(news.pubDate).toISOString(),
+    // })).filter(embed => embed.image) // Only include embeds that have images
+  };
+  
   console.log("Macron's response:", macronNews);
-  return macronNews;
+  return message;
 }
