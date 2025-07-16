@@ -8,13 +8,14 @@
     "start": "tsx src/index.ts",
     "dev": "tsx src/index.ts",
     "debug-scheduler": "tsx tests/debug-scheduler.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "cheerio": "^1.1.0",
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.0",
     "node-cron": "^4.2.1",
@@ -22,9 +23,12 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.0.14",
     "@types/node-cron": "^3.0.11",
     "@types/xml2js": "^0.4.14",
+    "jest": "^30.0.4",
+    "ts-jest": "^29.4.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }

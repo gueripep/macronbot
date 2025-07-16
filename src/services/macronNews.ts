@@ -4,6 +4,7 @@ import { queryMacronNews as queryMacronAINews } from "./ollama";
 import fs from "fs";
 import path from "path";
 import { BaseMessageOptions, AttachmentBuilder } from "discord.js";
+import { scrapeArticle } from "./scraper";
 
 export interface RssItem {
   title: string;
@@ -99,11 +100,11 @@ async function getNewsImages(rssItems: RssItem[]): Promise<string[]> {
 }
 
 export async function getMacronNews(): Promise<BaseMessageOptions> {
-  const mostImportantNews = await fetchMostImportantNews(3);
+  const mostImportantNews = await fetchMostImportantNews(1);
   const images = await getNewsImages(mostImportantNews);
-  const mostImportantNewsString = await getNewsString(mostImportantNews);
+  const article = await scrapeArticle(mostImportantNews[0]);
   
-  const macronNews = await queryMacronAINews(mostImportantNewsString);
+  const macronNews = await queryMacronAINews(article);
   
   const message: BaseMessageOptions = {
     content: macronNews,

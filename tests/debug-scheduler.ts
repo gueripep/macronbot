@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits, TextChannel } from "discord.js";
 import { fetchRssFeed, getMacronNews } from "../src/services/macronNews.ts";
-import { CHANNEL_IDS, testChannelId } from "../src/config.ts";
+import { CHANNEL_IDS, squeegeeChannelId, testChannelId } from "../src/config.ts";
 import dotenv from "dotenv";
 
 dotenv.config();

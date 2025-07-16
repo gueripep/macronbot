@@ -1,5 +1,5 @@
 
-const squeegeeChannelId = "1215373524923977748";
+export const squeegeeChannelId = "1215373524923977748";
 export const testChannelId = "768470703989063713";
 export const CHANNEL_IDS: string[] = [squeegeeChannelId];
 

@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import { Message } from "discord.js";
 import { OllamaResponse, OllamaRequest } from "../types.js";
+import { Article } from "./scraper.js";
 
 // Generic method to send any prompt to the AI
 export async function queryOllamaWithPrompt(prompt: string, model = "mistral:7b"): Promise<string> {
@@ -32,26 +33,26 @@ export async function queryMacronAI(
     ${pastMessages}
     Réponds au message suivant en tant que Emmanuel Macron : ${msg.content}.
     Sois un peu con, ta réponse doit faire 20 mots MAX. N'hésite pas à mentionner le nom de celui qui fait la demande : ${msg.author.displayName}
-    `;
+    N'écris ABSOLUMENT rien d'autre que ce que Macron dirait`;
 
   console.log(prompt);
 
   return queryOllamaWithPrompt(prompt);
 }
 
-export async function queryMacronNews(news: string): Promise<string> {
+export async function queryMacronNews(article: Article): Promise<string> {
   const prompt = `
-    Voici les nouvelles du jour : ${news}
-    Tu es Emmanuel Macron, président français. En français, pour chaque news mais sans faire de liste, explique vite fait ce qu'il se passe puis donne ton opinion en 60 mots maximum. Si plusieurs titres traitent d'une même information, regroupe-les.
-    Le ton doit être fluide et présidentiel, avec des transitions naturelles entre les sujets. Enchaîne les idées dans un seul discours cohérent. Ne dis rien d'autre que ce qui est demandé.
-    
-    Voici un exemple de réponse attendue :
-    Bonjour à tous, je suis Emmanuel Macron, bienvenue sur Macron News. Aujourd'hui, nous avons plusieurs sujets importants à aborder.
-    Sur le plan international, nous observons que le président américain a annoncé lundi un réarmement massif de Kiev à travers l'Otan, suite à des échanges infructueux avec Vladimir Poutine. Cette évolution confirme la nécessité d'une Europe forte et unie face aux crises géopolitiques, tout en rappelant l'importance du dialogue pour éviter l'escalade.
-    Concernant la protection des mineurs en ligne, la France s'engage aux côtés de nos partenaires européens au test d'une application permettant de vérifier l'âge des utilisateurs en ligne afin d'empêcher les enfants d'accéder à des contenus dangereux. C'est une avancée cruciale pour préserver notre jeunesse des dangers du numérique, sans sacrifier les libertés individuelles.
-    Enfin, sur le budget 2026, François Bayrou a prévu de présenter mardi à 16 heures ses orientations budgétaires pour dégager 40 milliards d'économies. La justice sociale et la croissance restent nos boussoles.
-    À demain sur Macron News.`;
+    Voici l'article' du jour : 
+    Titre : ${article.title}
+    Description : ${article.description}
+    DEBUT DE L'ARTICLE
+    ${article.text}
+    FIN DE L'ARTICLE
 
+    Tu es Emmanuel Macron, président de la République française. En français et en moins de 200 mots, fais un reportage expliquant ce qu'il se passe et donne ton avis pour ta chaîne d'information : Macron News.
+    Commence le message par un truc du genre "Bonjour à tous, bienvenue sur Macron News !"
+    Le ton doit être fluide et présidentiel. Ne dis rien d'autre que ce qui est demandé.`;
+  console.log(prompt);
   return queryOllamaWithPrompt(prompt, "gemma3:12b");
 }
 
