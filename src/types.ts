@@ -6,6 +6,18 @@ export interface OllamaRequest {
   model: string;
   prompt: string;
   stream: boolean;
+  format?: JSONSchema;
+}
+
+export interface JSONSchema {
+  type: string;
+  enum?: any[]; // for enum types
+  properties?: Record<string, JSONSchema>;
+  required?: string[];
+  format?: string;
+  minimum?: number;
+  maximum?: number;
+  maxLength?: number;
 }
 
 export interface Article {
@@ -28,8 +40,45 @@ export interface RedditRssItem {
   link: string;
   published: string;
   content: string;
+
+  // Computed fields (added after parsing)
+  tickers?: string[];
 }
 
+export interface PriceInformation {
+  ticker: string;
+  currentPrice: number;
+  yerstedayPrice: number;
+  priceChange: number;
+}
+
+export interface CompanyOverview {
+  Symbol: string;
+  Name: string;
+  Sector: string;
+  Industry: string;
+  Description: string;
+  MarketCapitalization: number;
+  RevenueTTM: number;
+  PERatio: number;
+  ForwardPE: number;
+  DividendYield: number;
+  DividendPerShare: number;
+  EPS: number;
+  ProfitMargin: number;
+  OperatingMarginTTM: number;
+  PriceInformation: StockPriceInfo;
+}
+
+export interface StockPriceInfo {
+  Week52High: number;
+  Week52Low: number;
+  MovingAverage50Day: number;
+  MovingAverage200Day: number;
+  Beta: number;
+  CurrentPrice: number;
+  YesterdayPrice: number;
+}
 export interface RedditRssFeed {
   title: string;
   link: string;
