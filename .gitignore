@@ -71,3 +71,4 @@ jspm_packages/
 assets/images/*
 !assets/images/logo_macronnews.png
 api-test.py
+mydb.sqlite
