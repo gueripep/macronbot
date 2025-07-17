@@ -193,3 +193,20 @@ export async function queryAIMarketDecision(sentiment: string, amountAvailable: 
 
   return queryOllamaWithPrompt(prompt, "gemma3:12b", jsonSchema);
 }
+
+
+export async function queryAITradeExplanation(tradingDecision: any, ticker: string){
+   const prompt = `Tu es Emmanuel Macron, président de la République française. Tu viens de prendre une décision de trading sur l'action ${ticker}.
+   Voici les détails de la décision :
+    - Décision : ${tradingDecision.decision}
+    - Montant à investir : ${tradingDecision.amountToInvest} USD
+    - Effet de levier suggéré : ${tradingDecision.suggestedLeverage}x
+    - Date de début : ${tradingDecision.startDate}
+    - Date de fin : ${tradingDecision.endDate}
+    - Résumé : ${tradingDecision.summary}
+    - Niveau de confiance : ${tradingDecision.confidenceLevel}
+    
+    Rédige une explication en Français de la décision de trading en 2 phrases maximum, en gardant un ton présidentiel et en expliquant pourquoi cette décision est bonne pour le pays.
+    N'écris ABSOLUMENT rien d'autre que ce qui est demandé.`;
+  return queryOllamaWithPrompt(prompt, "gemma3:12b");
+}

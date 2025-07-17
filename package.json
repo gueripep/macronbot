@@ -7,6 +7,7 @@
     "build": "tsc",
     "start": "tsx src/index.ts",
     "dev": "tsx src/index.ts",
+    "setup-db": "tsx src/dbSetup.ts",
     "debug-scheduler": "tsx tests/debug-scheduler.ts",
     "test": "jest"
   },

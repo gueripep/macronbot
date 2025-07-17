@@ -10,6 +10,7 @@ db.prepare(`
     decision TEXT CHECK(decision IN ('Long', 'Short')) NOT NULL,
     ticker TEXT NOT NULL,
     amount_invested REAL NOT NULL,
+    buy_price REAL NOT NULL,
     leverage INTEGER CHECK(leverage BETWEEN 1 AND 10) NOT NULL,
     start_date TEXT NOT NULL,  -- YYYY-MM-DD
     end_date TEXT NOT NULL,    -- YYYY-MM-DD
@@ -19,19 +20,28 @@ db.prepare(`
   )
 `).run();
 
-// Money table - only one row, update as needed
+// Prices table for caching
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS prices (
+    ticker TEXT PRIMARY KEY,
+    price REAL NOT NULL,
+    last_updated TEXT NOT NULL  -- ISO timestamp
+  )
+`).run();
+
+// Money table - only store available money, invested is computed
 db.prepare(`
   CREATE TABLE IF NOT EXISTS money (
     id INTEGER PRIMARY KEY CHECK(id = 1),
-    available REAL NOT NULL,
-    invested REAL NOT NULL
+    available REAL NOT NULL
   )
 `).run();
+
 
 // Insert initial money row if missing
 const row = db.prepare('SELECT id FROM money WHERE id = 1').get();
 if (!row) {
-  db.prepare('INSERT INTO money (id, available, invested) VALUES (1, 10000, 0)').run();
+  db.prepare('INSERT INTO money (id, available) VALUES (1, 10000)').run();
 }
 
 export default db;
