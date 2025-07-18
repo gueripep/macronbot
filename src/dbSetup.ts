@@ -16,15 +16,22 @@ db.prepare(`
     end_date TEXT NOT NULL,    -- YYYY-MM-DD
     summary TEXT,
     confidence REAL CHECK(confidence BETWEEN 0 AND 1) NOT NULL,
+    stop_loss REAL NOT NULL,   -- Stop loss percentage
+    take_profit REAL NOT NULL, -- Take profit percentage
+    is_closed BOOLEAN DEFAULT FALSE,
+    close_reason TEXT,         -- 'stop_loss', 'take_profit', 'manual', 'expired'
+    close_price REAL,
+    close_date TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )
 `).run();
 
-// Prices table for caching
+// Prices table for caching current and historical prices
 db.prepare(`
   CREATE TABLE IF NOT EXISTS prices (
     ticker TEXT PRIMARY KEY,
-    price REAL NOT NULL,
+    current_price REAL NOT NULL,
+    yesterday_price REAL,
     last_updated TEXT NOT NULL  -- ISO timestamp
   )
 `).run();
@@ -37,6 +44,45 @@ db.prepare(`
   )
 `).run();
 
+// AI Analysis cache table - store AI-generated analyses for 10-K sections
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS ai_analysis_cache (
+    ticker TEXT PRIMARY KEY,
+    business_overview TEXT,
+    risk_factors_overview TEXT,
+    strengths_weaknesses TEXT,
+    last_updated TEXT NOT NULL,  -- ISO timestamp
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+// Company overview cache table - store financial data from AlphaVantage
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS company_overview_cache (
+    ticker TEXT PRIMARY KEY,
+    symbol TEXT,
+    name TEXT,
+    sector TEXT,
+    industry TEXT,
+    description TEXT,
+    market_capitalization REAL,
+    revenue_ttm REAL,
+    pe_ratio REAL,
+    forward_pe REAL,
+    dividend_yield REAL,
+    dividend_per_share REAL,
+    eps REAL,
+    profit_margin REAL,
+    operating_margin_ttm REAL,
+    week_52_high REAL,
+    week_52_low REAL,
+    moving_average_50_day REAL,
+    moving_average_200_day REAL,
+    beta REAL,
+    last_updated TEXT NOT NULL,  -- ISO timestamp
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
 
 // Insert initial money row if missing
 const row = db.prepare('SELECT id FROM money WHERE id = 1').get();

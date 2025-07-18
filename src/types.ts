@@ -95,4 +95,6 @@ export interface RssFeed {
 
 export enum TenKSection {
   MDNA = "Item 7.    Management’s Discussion and Analysis of Financial Condition and Results of Operations",
+  Business = "Item 1.    Business",
+  RiskFactors = "Item 1A.    Risk Factors",
 }

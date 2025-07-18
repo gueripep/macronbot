@@ -9,6 +9,7 @@ import {
   CompanyOverview,
   JSONSchema,
 } from "../types.js";
+import { ClosedTransaction } from "../types/ClosedTransaction.js";
 
 // Generic method to send any prompt to the AI
 export async function queryOllamaWithPrompt(
@@ -68,10 +69,11 @@ export async function queryMacronNews(article: Article): Promise<string> {
     FIN DE L'ARTICLE
 
     Tu es Emmanuel Macron, président de la République française. En français et en moins de 200 mots, fais un reportage expliquant ce qu'il se passe et donne ton avis pour ta chaîne d'information : Macron News.
+    Prends en compte le fait que ceux à qui tu parles ne savent pas ce qui est écrit dans l'article. Il faut donc expliquer le contexte (sans mentionner l'article).
     Fais genre que ce qu'il se passe t'énerve légèrement tout en gardant un ton Présidentiel. Si une personne autre que Emmanuel Macron est responsable de ce qu'il se passe, mets la faute sur elle.
     Commence le message par un truc du genre "Bonjour à tous, bienvenue sur Macron News ! Aujourd'hui ..."
     Ne dis rien d'autre que ce qui est demandé.`;
-  return queryOllamaWithPrompt(prompt, "gemma3:12b");
+  return queryOllamaWithPrompt(prompt, "gemma3:27b");
 }
 
 //gets the list of sticker mentionned in a message
@@ -97,18 +99,58 @@ export async function queryAITickerListFromRedditPost(
   return tickers.length > 0 ? tickers : [];
 }
 
-export async function getStrengthAndWeaknessesFromMDNA(
-  mdna: string
+export async function queryAIBusinessOverview(
+  business10k: string
 ): Promise<string> {
   const prompt = `
-    Here is the Management's Discussion and Analysis (MD&A) section of a company's 10-K report:
-    ${mdna}
-    Your task is to analyze the MD&A and extract the company's strengths and weaknesses.
-    Provide a complete summary of the strengths and weaknesses in bullet points format.
-    Please use the exact numbers provided in the document to back up your claims.
-    Do NOT add any info not in the MD&A.`;
+    Here is the Business section of a company's 10-K report:
+    ${business10k}
+    Your task is to do a complete business overview of the company.`;
+  return queryOllamaWithPrompt(prompt);
+}
 
-  return queryOllamaWithPrompt(prompt, "mistral:7b");
+export async function queryAIRiskFactors(
+  riskFactors10k: string,
+  aiBusinessOverview: string
+): Promise<string> {
+  const prompt = `
+    Here is a business overview of a company:
+    ${aiBusinessOverview}
+    Now here is the Risk Factors section of that company's 10-K report:
+    ${riskFactors10k}
+    Your task is to summarize the risk factors in a concise manner.
+    Ignore generic boilerplate risks that apply to all companies (e.g., general economic conditions, cybersecurity, legal compliance, etc.) and focus on risks that are specific, detailed, or unusually emphasized for this company.`;
+  return queryOllamaWithPrompt(prompt);
+}
+
+export async function queryAIFullAnalysis(
+  mdna: string,
+  aiBusinessOverview: string,
+  aiRiskFactors: string
+): Promise<string> {
+  const prompt = `
+    You are a financial analyst reviewing a company based on its 10-K data.
+
+    Here is the Business Overview:
+    ${aiBusinessOverview}
+
+    Here are the Risk Factors:
+    ${aiRiskFactors}
+
+    Here is the MD&A:
+    ${mdna}
+
+    Your task is to produce a comprehensive investment-oriented summary including:
+    1. Key business model insights
+    2. Strategic goals and priorities
+    3. Strengths and weaknesses (backed by numbers)
+    4. Major risks and challenges (ignore generic ones)
+    5. Opportunities for future growth
+    6. Overall company outlook
+
+    Use bullet points where helpful. Focus on specifics, not fluff. Include relevant financial figures if mentioned. Avoid boilerplate content. Think like an investor.`;
+
+  return queryOllamaWithPrompt(prompt);
 }
 
 export async function queryAISentiment(
@@ -123,7 +165,7 @@ export async function queryAISentiment(
     Content: ${rssItem.content}
     END OF REDDIT POST
 
-    Here is the analysis of the stock mentioned in the post:
+    Here is a SWOT analysis of the stock mentioned in the post:
     ${aiAnalysis}
 
     Here is the company overview:
@@ -158,19 +200,34 @@ export async function queryAISentiment(
   return queryOllamaWithPrompt(prompt, "gemma3:12b");
 }
 
-export async function queryAIMarketDecision(sentiment: string, amountAvailable: number): Promise<string> {
+export async function queryAIMarketDecision(
+  sentiment: string,
+  amountAvailable: number
+): Promise<string> {
   const jsonSchema: JSONSchema = {
-    "type": "object",
-    "properties": {
-      "decision": { "type": "string", "enum": ["Long", "Short"] },
-      "amountToInvest": { "type": "number" },
-      "suggestedLeverage": { "type": "number", "minimum": 1, "maximum": 10 },
-      "startDate": { "type": "string", "format": "date" },
-      "endDate": { "type": "string", "format": "date" },
-      "summary": { "type": "string" },
-      "confidenceLevel": { "type": "number", "minimum": 0, "maximum": 1 },
+    type: "object",
+    properties: {
+      decision: { type: "string", enum: ["Long", "Short"] },
+      amountToInvest: { type: "number" },
+      suggestedLeverage: { type: "number", minimum: 1, maximum: 10 },
+      startDate: { type: "string", format: "date" },
+      endDate: { type: "string", format: "date" },
+      stopLoss: { type: "number", minimum: 1, maximum: 50 },
+      takeProfit: { type: "number", minimum: 1, maximum: 100 },
+      summary: { type: "string" },
+      confidenceLevel: { type: "number", minimum: 0, maximum: 1 },
     },
-    "required": ["decision", "amountToInvest", "suggestedLeverage", "startDate", "endDate", "summary", "confidenceLevel"],
+    required: [
+      "decision",
+      "amountToInvest",
+      "suggestedLeverage",
+      "startDate",
+      "endDate",
+      "stopLoss",
+      "takeProfit",
+      "summary",
+      "confidenceLevel",
+    ],
   };
   const currendDate = new Date();
   const prompt = `
@@ -184,6 +241,8 @@ export async function queryAIMarketDecision(sentiment: string, amountAvailable: 
     - Suggested Leverage (1x to 10x)  
     - Start Date (YYYY-MM-DD)  
     - End Date (YYYY-MM-DD)  
+    - Stop Loss (in %)  
+    - Take Profit (in %)
     - Brief summary (1-2 sentences) justifying your decision  
     - Confidence level (0 to 1)
     Provide the response in JSON format that matches the schema below:
@@ -194,9 +253,11 @@ export async function queryAIMarketDecision(sentiment: string, amountAvailable: 
   return queryOllamaWithPrompt(prompt, "gemma3:12b", jsonSchema);
 }
 
-
-export async function queryAITradeExplanation(tradingDecision: any, ticker: string){
-   const prompt = `Tu es Emmanuel Macron, président de la République française. Tu viens de prendre une décision de trading sur l'action ${ticker}.
+export async function queryAITradeExplanation(
+  tradingDecision: any,
+  ticker: string
+) {
+  const prompt = `Tu es Emmanuel Macron, président de la République française. Tu viens de prendre une décision de trading sur l'action ${ticker}.
    Voici les détails de la décision :
     - Décision : ${tradingDecision.decision}
     - Montant à investir : ${tradingDecision.amountToInvest} USD
@@ -208,5 +269,17 @@ export async function queryAITradeExplanation(tradingDecision: any, ticker: stri
     
     Rédige une explication en Français de la décision de trading en 2 phrases maximum, en gardant un ton présidentiel et en expliquant pourquoi cette décision est bonne pour le pays.
     N'écris ABSOLUMENT rien d'autre que ce qui est demandé.`;
+  return queryOllamaWithPrompt(prompt, "gemma3:12b");
+}
+
+
+export async function queryAIClosedTransationAnalysis(closedTransactions: ClosedTransaction[]){
+  const prompt = `
+    Tu es Emmanuel Macron, président de la République française. Voici une liste de transactions fermées :
+    ${closedTransactions.map(t => `ID: ${t.id}, Ticker: ${t.ticker}, Decision: ${t.decision}, Amount Invested: ${t.amountInvested}, Buy Price: ${t.buyPrice}, Close Price: ${t.closePrice}, Leverage: ${t.leverage}, PnL Percentage: ${t.pnlPercentage}, PnL Dollar: ${t.pnlDollar}, Close Reason: ${t.closeReason}, Start Date: ${t.startDate}, End Date: ${t.endDate}, Close Date: ${t.closeDate}, Final Value: ${t.finalValue}`).join('\n')}
+    
+    Rédige une analyse en Français des transactions fermées, en mettant en avant les points positifs et négatifs de chaque transaction, ainsi que les leçons à en tirer pour l'avenir.
+    N'écris ABSOLUMENT rien d'autre que ce qui est demandé.`;
+  
   return queryOllamaWithPrompt(prompt, "gemma3:12b");
 }

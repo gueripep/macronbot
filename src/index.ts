@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
-import { doDailyTrade, scheduleDailyMessages } from "./services/scheduler.js";
+import { doWeeklyTrade, scheduleDailyTasks } from "./services/scheduler.js";
 import { handleMessage } from "./handlers/messageHandler.js";
 
 dotenv.config();
@@ -16,8 +16,7 @@ const client = new Client({
 client.once("ready", (): void => {
   console.log(`Logged in as ${client.user?.tag}`);
   try {
-    scheduleDailyMessages(client);
-    doDailyTrade(client);
+    scheduleDailyTasks(client);
   } catch (error) {
     console.error("Error scheduling daily messages:", error);
   }
