@@ -1,15 +1,14 @@
 import fetch from "node-fetch";
-import { Message } from "discord.js";
 import {
-  OllamaResponse,
-  OllamaRequest,
   Article,
-  RedditRssItem,
-  PriceInformation,
   CompanyOverview,
   JSONSchema,
+  OllamaRequest,
+  OllamaResponse,
+  RedditRssItem
 } from "../types.js";
 import { ClosedTransaction } from "../types/ClosedTransaction.js";
+import { RememberService } from "./remember-service.js";
 
 // Generic method to send any prompt to the AI
 export async function queryOllamaWithPrompt(
@@ -24,7 +23,7 @@ export async function queryOllamaWithPrompt(
     format: format,
   };
 
-  const response = await fetch("http://localhost:11434/api/generate", {
+  const response = await fetch("http://192.168.1.174:11434/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(requestBody),
@@ -44,14 +43,24 @@ export async function queryOllamaWithPrompt(
 // Refactored method to use the generic prompt method
 export async function queryMacronAI(
   pastMessages: string,
-  msg: Message,
+  authorId: string,
+  authorDisplayName: string,
+  messageContent: string,
   botUsername: string
 ): Promise<string> {
+  // Get stored information about the message author
+  const userInfo = await RememberService.getUserInformation(authorId);
+  const userInfoSection = userInfo 
+    ? `\n\nInformations que tu connais sur ${authorDisplayName} :\n${userInfo}`
+    : '';
+  
+
   const prompt = `
     Tu es ${botUsername}. Voici la conversation précédant la demande :
     ${pastMessages}
-    Réponds au message suivant en tant que Emmanuel Macron : ${msg.content}.
-    Sois un peu con, ta réponse doit faire 20 mots MAX. N'hésite pas à mentionner le nom de celui qui fait la demande : ${msg.author.displayName}
+    ${userInfoSection}
+    Réponds au message suivant en tant que Emmanuel Macron : ${messageContent}.
+    Ta réponse doit faire environ 20 mots. N'hésite pas à mentionner le nom de celui qui fait la demande : ${authorDisplayName}
     N'écris ABSOLUMENT rien d'autre que ce que Macron dirait`;
 
   console.log(prompt);
@@ -282,4 +291,72 @@ export async function queryAIClosedTransationAnalysis(closedTransactions: Closed
     N'écris ABSOLUMENT rien d'autre que ce qui est demandé.`;
   
   return queryOllamaWithPrompt(prompt, "gemma3:12b");
+}
+
+export async function queryAICombineUserInfo(
+  username: string,
+  existingInfo: string,
+  newInformation: string
+): Promise<string> {
+  const prompt = `
+    Tu dois combiner les informations existantes d'un utilisateur avec de nouvelles informations.
+    
+    Informations existantes sur ${username}:
+    ${existingInfo}
+    
+    Nouvelles informations à ajouter:
+    ${newInformation}
+    
+    Retourne une seule chaîne de caractères qui combine intelligemment toutes ces informations de manière cohérente et organisée. 
+    Évite les répétitions et structure l'information de façon claire.
+    Si des informations se contredisent, privilégie les nouvelles informations.
+    Ne dis absolument rien d'autre que la description.
+  `;
+  
+  return queryOllamaWithPrompt(prompt);
+}
+
+export async function queryAIFormatUserInfo(
+  username: string,
+  newInformation: string
+): Promise<string> {
+  const prompt = `
+    Tu dois formater et organiser les informations suivantes sur un utilisateur de manière claire et structurée:
+    
+    Informations sur ${username}:
+    ${newInformation}
+    
+    Retourne une seule chaîne de caractères qui organise ces informations de façon claire et cohérente, ne dis absolument rien d'autre.
+  `;
+  
+  return queryOllamaWithPrompt(prompt);
+}
+
+export async function queryAIExtractUserInfo(
+  username: string,
+  messageContent: string
+): Promise<{ hasInfo: boolean; information: string }> {
+  const prompt = `
+    Analyse le message suivant d'un utilisateur nommé ${username}:
+    "${messageContent}"
+
+    Est-ce que ce message contient une ou plusieurs informations sur l'utilisateur?
+
+    Réponds UNIQUEMENT par:
+    - "OUI: [information à retenir]" si le message contient quelque chose d'intéressant
+    - "NON" si le message ne contient rien d'intéressant à retenir
+  `;
+  console.log(`AI prompt for user info extraction: ${prompt}`);
+  const response = await queryOllamaWithPrompt(prompt);
+  
+  console.log(`AI response for user info extraction: ${response}`);
+  if (response.startsWith("NON")) {
+    return { hasInfo: false, information: "" };
+  } else if (response.startsWith("OUI:")) {
+    const information = response.replace("OUI:", "").trim();
+    return { hasInfo: true, information };
+  } else {
+    // Fallback in case AI doesn't follow exact format
+    return { hasInfo: false, information: "" };
+  }
 }

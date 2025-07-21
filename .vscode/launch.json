@@ -11,7 +11,7 @@
       "skipFiles": ["<node_internals>/**"],
       "runtimeExecutable": "npx",
       "program": "tsx",
-      "args": ["${workspaceFolder}/src/services/macronTrade.ts"],
+      "args": ["${workspaceFolder}/src/index.ts"],
       "envFile": "${workspaceFolder}/.env",
       "console": "integratedTerminal",
       "resolveSourceMapLocations": [

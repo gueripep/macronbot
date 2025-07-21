@@ -84,6 +84,17 @@ db.prepare(`
   )
 `).run();
 
+// User information table - store information about users
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS user_info (
+    user_id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    information TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
 // Insert initial money row if missing
 const row = db.prepare('SELECT id FROM money WHERE id = 1').get();
 if (!row) {

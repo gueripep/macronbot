@@ -2,6 +2,8 @@ export const squeegeeChannelId = "1215373524923977748";
 export const testChannelId = "768470703989063713";
 export const CHANNEL_IDS: string[] = [squeegeeChannelId, testChannelId];
 
+export const clientId = "1393207705950355476";
+
 export const randomReplies: string[] = [
   "Tu me fatigues là...",
   "Fin fréro ping moi pas pour dire ca stp la prochaine fois",

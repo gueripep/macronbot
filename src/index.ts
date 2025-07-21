@@ -1,7 +1,11 @@
-import { Client, GatewayIntentBits } from "discord.js";
+import { Client, GatewayIntentBits, Routes } from "discord.js";
 import dotenv from "dotenv";
-import { checkPositionsAndUpdateEmbed, doWeeklyTrade, scheduleDailyTasks, sendDailyMessage } from "./services/scheduler.js";
+import { clientId } from "./config.js";
+import { commands, rest } from "./deploy-command.js";
 import { handleMessage } from "./handlers/messageHandler.js";
+import { getPortfolioEmbed } from "./services/macron-trade/macron-trade-service.js";
+import { RememberService } from "./services/remember-service.js";
+import { scheduleDailyTasks } from "./services/scheduler.js";
 
 dotenv.config();
 
@@ -17,12 +21,12 @@ client.once("ready", (): void => {
   console.log(`Logged in as ${client.user?.tag}`);
   try {
     scheduleDailyTasks(client);
-    checkPositionsAndUpdateEmbed(client);
   } catch (error) {
     console.error("Error scheduling daily messages:", error);
   }
 });
 
+// Handle incoming messages
 client.on("messageCreate", async (msg) => {
   try {
     await handleMessage(msg, client);
@@ -57,3 +61,24 @@ client.login(token).catch((error) => {
   console.error("Failed to login to Discord:", error);
   process.exit(1);
 });
+
+
+//handle slash commands
+client.on('interactionCreate', async interaction => {
+	if (!interaction.isChatInputCommand()) return;
+
+	const { commandName } = interaction;
+
+	if (commandName === 'portfolio') {
+		const embed = await getPortfolioEmbed();
+		await interaction.reply({ content: 'Voici mes positions actuelles', embeds: [embed] });
+	}
+  else if (commandName === 'remember') {
+    await RememberService.handleRememberCommand(interaction);
+  }
+});
+
+await rest.put(
+	Routes.applicationCommands(clientId),
+	{ body: commands },
+);

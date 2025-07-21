@@ -10,8 +10,48 @@ A Discord bot that responds as Emmanuel Macron with AI-generated responses. Buil
 - Channel-specific responses
 - Conversation history context for more relevant responses
 - RSS feed integration for Macron news
+- **Remember Command**: Store and organize information about users using AI
+- **Auto-Learning**: Automatically extracts and remembers user information from conversations
 - Full TypeScript support with type safety
 - Comprehensive error handling to prevent crashes
+
+## Features in Detail
+
+### 🧠 **Auto-Learning System**
+The bot automatically analyzes every message to detect interesting personal information about users and remembers it for future conversations. 
+
+**What it learns:**
+- Professional information (job, skills, company)
+- Personal interests and hobbies
+- Location and background
+- Preferences and experiences
+- Educational details
+
+**How it works:**
+1. User mentions the bot in a message
+2. AI analyzes if the message contains personal information worth remembering
+3. If yes: Automatically stores the information using the remember system
+4. If no: Continues with normal conversation
+5. Future conversations include this learned context
+
+### 📝 **Manual Remember System**
+
+## Commands
+
+### `/remember`
+Store personal information about yourself or someone else that the bot will remember for future interactions.
+
+**Usage:** 
+- `/remember information:"Your information here"` - Store info about yourself
+- `/remember information:"Some information" user:@SomeUser` - Store info about another user
+
+**Features:**
+- Store information about yourself or other Discord users
+- If no information exists, the AI will format and organize the new information
+- If information already exists, the AI will intelligently combine new information with existing data
+- The bot uses AI to avoid duplicates and organize information coherently
+- Information is stored persistently in the database and used in future conversations
+- When mentioning users in chat, Macron will reference what he knows about them
 
 ## Setup
 
