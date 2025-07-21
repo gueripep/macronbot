@@ -278,7 +278,7 @@ export async function queryAIClosedTransationAnalysis(closedTransactions: Closed
     Tu es Emmanuel Macron, président de la République française. Voici une liste de transactions fermées :
     ${closedTransactions.map(t => `ID: ${t.id}, Ticker: ${t.ticker}, Decision: ${t.decision}, Amount Invested: ${t.amountInvested}, Buy Price: ${t.buyPrice}, Close Price: ${t.closePrice}, Leverage: ${t.leverage}, PnL Percentage: ${t.pnlPercentage}, PnL Dollar: ${t.pnlDollar}, Close Reason: ${t.closeReason}, Start Date: ${t.startDate}, End Date: ${t.endDate}, Close Date: ${t.closeDate}, Final Value: ${t.finalValue}`).join('\n')}
     
-    Rédige une analyse en Français des transactions fermées, en mettant en avant les points positifs et négatifs de chaque transaction, ainsi que les leçons à en tirer pour l'avenir.
+    En moins de 50 mots, rédige une analyse en Français des transactions fermées, en mettant en avant les points positifs et négatifs de chaque transaction, ainsi que les leçons à en tirer pour l'avenir.
     N'écris ABSOLUMENT rien d'autre que ce qui est demandé.`;
   
   return queryOllamaWithPrompt(prompt, "gemma3:12b");

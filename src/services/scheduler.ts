@@ -22,7 +22,7 @@ export function scheduleDailyTasks(client: any): void {
   
 }
 
-async function sendDailyMessage(client: any): Promise<void> {
+export async function sendDailyMessage(client: any): Promise<void> {
   console.log("Daily method executed at:", new Date().toISOString());
   
   const channel = client.channels.cache.get(squeegeeChannelId) as TextChannel;
@@ -60,16 +60,19 @@ export async function checkPositionsAndUpdateEmbed(client: any): Promise<void> {
   if (channel) {
     const closedTransactions = await checkAndClosePositions();
     const explication = await queryAIClosedTransationAnalysis(closedTransactions);
-    const embed = await getPortfolioEmbed();
+    if(closedTransactions.length > 0) {
+      const embed = await getPortfolioEmbed();
 
-    if (explication && embed) {
-      const message: BaseMessageOptions = {
-        content: explication,
-        embeds: [embed]
-      };
-      await channel.send(message);
-    } else {
-      await channel.send("Aucune opportunité de trading trouvée aujourd'hui.");
+
+      if (explication && embed) {
+        const message: BaseMessageOptions = {
+          content: explication,
+          embeds: [embed]
+        };
+        await channel.send(message);
+      } else {
+        // await channel.send("Aucune position à fermer aujourd'hui.");
+      }
     }
   }
 }
