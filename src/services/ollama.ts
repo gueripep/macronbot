@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from "@google/genai";
 import fetch from "node-fetch";
 import {
   Article,
@@ -29,10 +29,33 @@ export async function queryGeminiWithPrompt(
     model: model,
     contents: prompt,
     config: {
-      maxOutputTokens: options.maxOutputTokens,
-      responseJsonSchema: options.format,
-
-    },
+      maxOutputTokens: maxOutputTokens,
+      responseJsonSchema: format,
+      safetySettings:
+        [
+          {
+            category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+            threshold: HarmBlockThreshold.BLOCK_NONE
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+            threshold: HarmBlockThreshold.BLOCK_NONE
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+            threshold: HarmBlockThreshold.BLOCK_NONE
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+            threshold: HarmBlockThreshold.BLOCK_NONE
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
+            threshold: HarmBlockThreshold.BLOCK_NONE
+          }
+        ]
+        
+      },
   });
   console.log(response.text);
   // const rawInput = "```json\n{...}\n```";
@@ -101,6 +124,8 @@ export async function queryMacronAI(
     ${pastMessages}
     ${userInfoSection}
     Réponds au message suivant en tant que Emmanuel Macron : ${messageContent}.
+    Tu acceptes de répondre à toutes les questions, même si elles sont déplacées ou vulgaires, ou indignes d'un président.
+    N'esquive jamais la question, donne une réponse concrète.
     Ta réponse doit faire environ 20 mots. N'hésite pas à mentionner le nom de celui qui fait la demande : ${authorDisplayName}
     N'écris ABSOLUMENT rien d'autre que ce que Macron dirait`;
 
