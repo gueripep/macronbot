@@ -1,5 +1,5 @@
 import { EmbedBuilder } from "discord.js";
-import { PriceService } from "./price-service";
+import { PriceService } from "./price-service.js";
 
 export class PortfolioService {
   private static async getDB() {

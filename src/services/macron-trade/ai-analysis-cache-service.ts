@@ -1,4 +1,4 @@
-import { queryAIBusinessOverview, queryAIRiskFactors, queryAIFullAnalysis } from "../ollama";
+import { queryAIBusinessOverview, queryAIFullAnalysis, queryAIRiskFactors } from "../ollama.js";
 
 interface CachedAnalysis {
   businessOverview: string;

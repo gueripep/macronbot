@@ -3,9 +3,9 @@ import fs from "fs";
 import fetch from "node-fetch";
 import path from "path";
 import { parseStringPromise } from "xml2js";
-import { RssFeed, RssItem } from "../types";
-import { queryMacronNews as queryMacronAINews } from "./ollama";
-import { scrapeFranceInfoArticle } from "./scraper";
+import { RssFeed, RssItem } from "../types.js";
+import { queryMacronNews as queryMacronAINews } from "./ollama.js";
+import { scrapeFranceInfoArticle } from "./scraper.js";
 
 
 export async function fetchRssFeed(): Promise<RssFeed> {

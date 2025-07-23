@@ -1,5 +1,5 @@
-import { CompanyOverview } from "../../types";
-import { PriceService } from "./price-service";
+import { CompanyOverview } from "../../types.js";
+import { PriceService } from "./price-service.js";
 
 /**
  * Service for caching and retrieving company overview data from AlphaVantage

@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import fetch from "node-fetch"; // If Node.js < 18, or for explicit import
-import { Article, RssItem } from "../types";
+import { Article, RssItem } from "../types.js";
 
 
 

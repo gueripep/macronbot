@@ -1,6 +1,6 @@
 import { REST, Routes, SlashCommandBuilder } from "discord.js";
 import dotenv from "dotenv";
-import { clientId } from "./config";
+import { clientId } from "./config.js";
 
 dotenv.config();
 

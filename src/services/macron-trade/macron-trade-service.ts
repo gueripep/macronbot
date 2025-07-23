@@ -1,17 +1,17 @@
 import { ChatInputCommandInteraction } from "discord.js";
 import { parseStringPromise } from "xml2js";
-import { RedditRssFeed, TenKSection } from "../../types";
-import { ClosedTransaction } from "../../types/ClosedTransaction";
+import { RedditRssFeed, TenKSection } from "../../types.js";
+import { ClosedTransaction } from "../../types/ClosedTransaction.js";
 import {
   queryAIMarketDecision,
   queryAISentiment,
   queryAITickerListFromRedditPost,
   queryAITradeExplanation,
-} from "../ollama";
-import { AIAnalysisCacheService } from "./ai-analysis-cache-service";
-import { CompanyDataService } from "./company-data-service";
-import { PortfolioService } from "./portfolio-service";
-import { PriceService } from "./price-service";
+} from "../ollama.js";
+import { AIAnalysisCacheService } from "./ai-analysis-cache-service.js";
+import { CompanyDataService } from "./company-data-service.js";
+import { PortfolioService } from "./portfolio-service.js";
+import { PriceService } from "./price-service.js";
 
 const NEWS_SOURCE = "https://www.reddit.com/r/wallstreetbets/search.rss?q=flair_name:%22DD%22&restrict_sr=1&sort=new";
 

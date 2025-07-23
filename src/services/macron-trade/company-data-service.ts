@@ -1,9 +1,9 @@
+import * as cheerio from "cheerio";
 import fs from "fs/promises";
 import path from "path";
-import * as cheerio from "cheerio";
-import { CompanyOverview, PriceInformation, TenKSection } from "../../types";
-import { PriceService } from "./price-service";
-import { CompanyOverviewCacheService } from "./company-overview-cache-service";
+import { CompanyOverview, PriceInformation, TenKSection } from "../../types.js";
+import { CompanyOverviewCacheService } from "./company-overview-cache-service.js";
+import { PriceService } from "./price-service.js";
 
 const HEADERS = {
   "User-Agent": "PaulGueripel poulbleu.du38@gmail.com",
