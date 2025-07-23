@@ -1,18 +1,27 @@
+import { ChatInputCommandInteraction } from "discord.js";
 import { parseStringPromise } from "xml2js";
 import { RedditRssFeed, TenKSection } from "../../types";
 import { ClosedTransaction } from "../../types/ClosedTransaction";
-import { CompanyDataService } from "./company-data-service";
-import { PriceService } from "./price-service";
-import { PortfolioService } from "./portfolio-service";
-import { AIAnalysisCacheService } from "./ai-analysis-cache-service";
 import {
   queryAIMarketDecision,
   queryAISentiment,
   queryAITickerListFromRedditPost,
   queryAITradeExplanation,
 } from "../ollama";
+import { AIAnalysisCacheService } from "./ai-analysis-cache-service";
+import { CompanyDataService } from "./company-data-service";
+import { PortfolioService } from "./portfolio-service";
+import { PriceService } from "./price-service";
 
 const NEWS_SOURCE = "https://www.reddit.com/r/wallstreetbets/search.rss?q=flair_name:%22DD%22&restrict_sr=1&sort=new";
+
+// Rate limiting for trade command (1 hour cooldown)
+const TRADE_COMMAND_COOLDOWN = 60 * 60 * 1000; // 1 hour in milliseconds
+const lastTradeCommandExecution = new Map<string, number>();
+
+// Trading limits to prevent excessive API costs
+const MAX_REDDIT_POSTS_TO_PROCESS = 5; // Maximum number of Reddit posts to analyze per trade session
+const MAX_TICKERS_PER_POST = 3; // Maximum number of tickers to process from each post
 
 /**
  * Service class responsible for managing automated trading operations
@@ -32,6 +41,64 @@ export class TradingService {
   }
 
   /**
+   * Handles the trade command interaction with rate limiting
+   * @param interaction - Discord ChatInputCommandInteraction
+   */
+  static async handleTradeCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+    try {
+      const userId = interaction.user.id;
+      const now = Date.now();
+      
+      // Check rate limiting
+      const lastExecution = lastTradeCommandExecution.get(userId);
+      if (lastExecution && now - lastExecution < TRADE_COMMAND_COOLDOWN) {
+        const timeLeft = Math.ceil((TRADE_COMMAND_COOLDOWN - (now - lastExecution)) / (60 * 1000));
+        await interaction.reply({ 
+          content: `🕐 Tu dois attendre encore ${timeLeft} minute(s) avant de pouvoir utiliser cette commande à nouveau.`, 
+          ephemeral: true 
+        });
+        return;
+      }
+
+      // Defer the reply since trading analysis might take some time
+      await interaction.deferReply();
+
+      // Update rate limiting
+      lastTradeCommandExecution.set(userId, now);
+
+      // Execute the trade analysis
+      const tradeExplanation = await this.trade();
+      const embed = await PortfolioService.getPortfolioEmbed();
+
+      if (tradeExplanation && embed) {
+        await interaction.editReply({
+          content: tradeExplanation,
+          embeds: [embed]
+        });
+      } else {
+        await interaction.editReply({
+          content: "Aucune opportunité de trading trouvée pour le moment."
+        });
+      }
+
+    } catch (error) {
+      console.error('Error in trade command:', error);
+      
+      // Handle the error response appropriately
+      if (interaction.deferred) {
+        await interaction.editReply({ 
+          content: 'Désolé, une erreur s\'est produite lors de l\'analyse des opportunités de trading.' 
+        });
+      } else {
+        await interaction.reply({ 
+          content: 'Désolé, une erreur s\'est produite lors de l\'analyse des opportunités de trading.',
+          ephemeral: true
+        });
+      }
+    }
+  }
+
+  /**
    * Main trading method that orchestrates the entire trading process:
    * 1. Checks and closes existing positions based on stop loss/take profit
    * 2. Fetches latest Reddit posts from WallStreetBets
@@ -44,39 +111,55 @@ export class TradingService {
     await this.checkAndClosePositions();
 
     const feed = await this.fetchRssFeed();
+    let postsProcessed = 0;
 
-    // Process each Reddit post for trading opportunities
+    // Process each Reddit post for trading opportunities (with limit)
     for (const item of feed.entry) {
+      if (postsProcessed >= MAX_REDDIT_POSTS_TO_PROCESS) {
+        console.log(`Reached maximum posts limit (${MAX_REDDIT_POSTS_TO_PROCESS}), stopping analysis`);
+        break;
+      }
+
       try {
-        console.log(`Processing Reddit post: ${item.title}`);
+        console.log(`Processing Reddit post ${postsProcessed + 1}/${MAX_REDDIT_POSTS_TO_PROCESS}: ${item.title}`);
 
         // Extract stock tickers mentioned in the post
         const tickers = await queryAITickerListFromRedditPost(item);
         if (!tickers || tickers.length === 0) {
           console.log("No tickers found in this post, trying next...");
+          postsProcessed++;
           continue;
         }
 
         const redditPostWithTickers = { ...item, tickers };
         console.log(`Found tickers: ${tickers.join(", ")}`);
 
-        // Process each ticker found in the post
+        // Process each ticker found in the post (with limit)
+        let tickersProcessed = 0;
         for (const ticker of tickers) {
+          if (tickersProcessed >= MAX_TICKERS_PER_POST) {
+            console.log(`Reached maximum tickers limit (${MAX_TICKERS_PER_POST}) for this post, moving to next post`);
+            break;
+          }
+
           try {
             const result = await this.processTicker(ticker, redditPostWithTickers);
+            tickersProcessed++;
             if (result) return result; // Return on first successful trade
           } catch (tickerError) {
             console.error(`Error processing ticker ${ticker}:`, tickerError);
+            tickersProcessed++;
             continue;
           }
         }
       } catch (postError) {
         console.error(`Error processing Reddit post "${item.title}":`, postError);
-        continue;
+      } finally {
+        postsProcessed++;
       }
     }
 
-    console.log("No Reddit posts could be successfully processed");
+    console.log(`Processed ${postsProcessed} Reddit posts, no successful trades executed`);
     return null;
   }
 
@@ -362,6 +445,21 @@ export class TradingService {
   private static async getDB() {
     return (await import("../../dbSetup")).default;
   }
+  /**
+   * Gets the count of currently active trading positions
+   * @returns Promise<number> - Number of active positions
+   */
+  static async getActiveTradesCount(): Promise<number> {
+    const db = await this.getDB();
+    const currentDate = new Date().toISOString().split('T')[0];
+    
+    const result = db.prepare(`
+      SELECT COUNT(*) as count FROM transactions 
+      WHERE is_closed = FALSE AND end_date >= ?
+    `).get(currentDate);
+    
+    return result.count;
+  }
 }
 
 // Export convenience functions for external use
@@ -369,3 +467,5 @@ export const fetchRssFeed = TradingService.fetchRssFeed.bind(TradingService);
 export const trade = TradingService.trade.bind(TradingService);
 export const getPortfolioEmbed = PortfolioService.getPortfolioEmbed.bind(PortfolioService);
 export const checkAndClosePositions = TradingService.checkAndClosePositions.bind(TradingService);
+export const getActiveTradesCount = TradingService.getActiveTradesCount.bind(TradingService);
+export const handleTradeCommand = TradingService.handleTradeCommand.bind(TradingService);

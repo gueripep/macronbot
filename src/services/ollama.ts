@@ -1,3 +1,4 @@
+import { GoogleGenAI } from "@google/genai";
 import fetch from "node-fetch";
 import {
   Article,
@@ -10,17 +11,57 @@ import {
 import { ClosedTransaction } from "../types/ClosedTransaction.js";
 import { RememberService } from "./remember-service.js";
 
+// The client gets the API key from the environment variable `GEMINI_API_KEY`.
+import dotenv from "dotenv";
+dotenv.config();
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+export async function queryGeminiWithPrompt( 
+  prompt: string,
+  options: {
+    model?: string;
+    format?: JSONSchema;
+    maxOutputTokens?: number;
+  } = {}): Promise<string> {
+  const { model = "gemma-3-27b-it", format, maxOutputTokens = 500 } = options;
+  const response = await ai.models.generateContent({
+    model: model,
+    contents: prompt,
+    config: {
+      maxOutputTokens: options.maxOutputTokens,
+      responseJsonSchema: options.format,
+
+    },
+  });
+  console.log(response.text);
+  // const rawInput = "```json\n{...}\n```";
+  const cleaned = response.text!.replace(/```[\s\S]*?\n|```/g, "").trim();
+
+  return cleaned;
+}
+
+
 // Generic method to send any prompt to the AI
 export async function queryOllamaWithPrompt(
   prompt: string,
-  model = "mistral:7b",
-  format?: JSONSchema
+  options: {
+    model?: string;
+    format?: JSONSchema;
+    maxOutputTokens?: number;
+    maxInputTokens?: number;
+  } = {}
 ): Promise<string> {
+  const { model = "mistral:7b", format, maxOutputTokens = 200, maxInputTokens = 4096 } = options;
   const requestBody: OllamaRequest = {
     model: model,
     prompt: prompt,
     stream: false,
     format: format,
+    options: {
+      num_ctx: maxInputTokens, // Context size
+      num_predict: maxOutputTokens,
+    },
   };
 
   const response = await fetch("http://192.168.1.174:11434/api/generate", {
@@ -65,7 +106,7 @@ export async function queryMacronAI(
 
   console.log(prompt);
 
-  return queryOllamaWithPrompt(prompt);
+  return queryGeminiWithPrompt(prompt);
 }
 
 export async function queryMacronNews(article: Article): Promise<string> {
@@ -77,12 +118,12 @@ export async function queryMacronNews(article: Article): Promise<string> {
     ${article.text}
     FIN DE L'ARTICLE
 
-    Tu es Emmanuel Macron, président de la République française. En français et en moins de 200 mots, fais un reportage expliquant ce qu'il se passe et donne ton avis pour ta chaîne d'information : Macron News.
+    Tu es Emmanuel Macron, président de la République française. En français et en moins de 150 mots, fais un reportage expliquant ce qu'il se passe et donne ton avis pour ta chaîne d'information : Macron News.
     Prends en compte le fait que ceux à qui tu parles ne savent pas ce qui est écrit dans l'article. Il faut donc expliquer le contexte (sans mentionner l'article).
-    Fais genre que ce qu'il se passe t'énerve légèrement tout en gardant un ton Présidentiel. Si une personne autre que Emmanuel Macron est responsable de ce qu'il se passe, mets la faute sur elle.
+    Si une personne autre que Emmanuel Macron est responsable de ce qu'il se passe, mets la faute sur elle.
     Commence le message par un truc du genre "Bonjour à tous, bienvenue sur Macron News ! Aujourd'hui ..."
     Ne dis rien d'autre que ce qui est demandé.`;
-  return queryOllamaWithPrompt(prompt, "gemma3:27b");
+  return queryGeminiWithPrompt(prompt);
 }
 
 //gets the list of sticker mentionned in a message
@@ -99,7 +140,7 @@ export async function queryAITickerListFromRedditPost(
     Return the list of tickers in a comma-separated format, without any additional text or explanation.
     If no tickers are mentioned, return "No tickers found".`;
 
-  const response = await queryOllamaWithPrompt(prompt, "gemma3:27b");
+  const response = await queryGeminiWithPrompt(prompt);
   // Clean up the response
   const tickers = response
     .split(",")
@@ -115,7 +156,7 @@ export async function queryAIBusinessOverview(
     Here is the Business section of a company's 10-K report:
     ${business10k}
     Your task is to do a complete business overview of the company.`;
-  return queryOllamaWithPrompt(prompt);
+  return queryGeminiWithPrompt(prompt, { model: "gemini-2.0-flash" });
 }
 
 export async function queryAIRiskFactors(
@@ -129,7 +170,7 @@ export async function queryAIRiskFactors(
     ${riskFactors10k}
     Your task is to summarize the risk factors in a concise manner.
     Ignore generic boilerplate risks that apply to all companies (e.g., general economic conditions, cybersecurity, legal compliance, etc.) and focus on risks that are specific, detailed, or unusually emphasized for this company.`;
-  return queryOllamaWithPrompt(prompt);
+  return queryGeminiWithPrompt(prompt, {model: "gemini-2.0-flash"});
 }
 
 export async function queryAIFullAnalysis(
@@ -149,7 +190,7 @@ export async function queryAIFullAnalysis(
     Here is the MD&A:
     ${mdna}
 
-    Your task is to produce a comprehensive investment-oriented summary including:
+    After providing a thorough description of the company, your task is to produce a comprehensive investment-oriented summary including:
     1. Key business model insights
     2. Strategic goals and priorities
     3. Strengths and weaknesses (backed by numbers)
@@ -159,7 +200,7 @@ export async function queryAIFullAnalysis(
 
     Use bullet points where helpful. Focus on specifics, not fluff. Include relevant financial figures if mentioned. Avoid boilerplate content. Think like an investor.`;
 
-  return queryOllamaWithPrompt(prompt);
+  return queryGeminiWithPrompt(prompt, { model: "gemini-2.0-flash" });
 }
 
 export async function queryAISentiment(
@@ -206,7 +247,7 @@ export async function queryAISentiment(
     You can use the Reddit post information but consider it as additional context rather than the primary source.
     Please explain your reasoning clearly and objectively and do not provide a Disclaimer.`;
 
-  return queryOllamaWithPrompt(prompt, "gemma3:12b");
+  return queryGeminiWithPrompt(prompt);
 }
 
 export async function queryAIMarketDecision(
@@ -247,7 +288,7 @@ export async function queryAIMarketDecision(
     Based on the above information, **make a trading decision** with these details:  
     - Decision: 'Long' or 'Short'  
     - Amount to invest (in USD)
-    - Suggested Leverage (1x to 10x)  
+    - Suggested Leverage (1 to 10)
     - Start Date (YYYY-MM-DD)  
     - End Date (YYYY-MM-DD)  
     - Stop Loss (in %)  
@@ -259,7 +300,7 @@ export async function queryAIMarketDecision(
     If sentiment is neutral, suggest no trade
     `;
 
-  return queryOllamaWithPrompt(prompt, "gemma3:12b", jsonSchema);
+  return queryGeminiWithPrompt(prompt, { format: jsonSchema });
 }
 
 export async function queryAITradeExplanation(
@@ -278,7 +319,7 @@ export async function queryAITradeExplanation(
     
     Rédige une explication en Français de la décision de trading en 2 phrases maximum, en gardant un ton présidentiel et en expliquant pourquoi cette décision est bonne pour le pays.
     N'écris ABSOLUMENT rien d'autre que ce qui est demandé.`;
-  return queryOllamaWithPrompt(prompt, "gemma3:12b");
+  return queryGeminiWithPrompt(prompt);
 }
 
 
@@ -287,10 +328,10 @@ export async function queryAIClosedTransationAnalysis(closedTransactions: Closed
     Tu es Emmanuel Macron, président de la République française. Voici une liste de transactions fermées :
     ${closedTransactions.map(t => `ID: ${t.id}, Ticker: ${t.ticker}, Decision: ${t.decision}, Amount Invested: ${t.amountInvested}, Buy Price: ${t.buyPrice}, Close Price: ${t.closePrice}, Leverage: ${t.leverage}, PnL Percentage: ${t.pnlPercentage}, PnL Dollar: ${t.pnlDollar}, Close Reason: ${t.closeReason}, Start Date: ${t.startDate}, End Date: ${t.endDate}, Close Date: ${t.closeDate}, Final Value: ${t.finalValue}`).join('\n')}
     
-    En moins de 50 mots, rédige une analyse en Français des transactions fermées, en mettant en avant les points positifs et négatifs de chaque transaction, ainsi que les leçons à en tirer pour l'avenir.
+    En moins de 50 mots, rédige une analyse en Français des transactions fermées, en mettant en avant les points positifs et négatifs de chaque transaction, ainsi que les leçons à en tirer pour l'avenir de la France.
     N'écris ABSOLUMENT rien d'autre que ce qui est demandé.`;
   
-  return queryOllamaWithPrompt(prompt, "gemma3:12b");
+  return queryGeminiWithPrompt(prompt);
 }
 
 export async function queryAICombineUserInfo(
@@ -313,7 +354,7 @@ export async function queryAICombineUserInfo(
     Ne dis absolument rien d'autre que la description.
   `;
   
-  return queryOllamaWithPrompt(prompt);
+  return queryGeminiWithPrompt(prompt);
 }
 
 export async function queryAIFormatUserInfo(
@@ -329,34 +370,54 @@ export async function queryAIFormatUserInfo(
     Retourne une seule chaîne de caractères qui organise ces informations de façon claire et cohérente, ne dis absolument rien d'autre.
   `;
   
-  return queryOllamaWithPrompt(prompt);
+  return queryGeminiWithPrompt(prompt);
 }
 
 export async function queryAIExtractUserInfo(
   username: string,
   messageContent: string
-): Promise<{ hasInfo: boolean; information: string }> {
+): Promise<boolean> {
   const prompt = `
     Analyse le message suivant d'un utilisateur nommé ${username}:
     "${messageContent}"
 
-    Est-ce que ce message contient une ou plusieurs informations sur l'utilisateur?
-
+    Est-ce que ce message contient une ou plusieurs informations personelles, pertinentes, et durables sur l'utilisateur?
     Réponds UNIQUEMENT par:
-    - "OUI: [information à retenir]" si le message contient quelque chose d'intéressant
-    - "NON" si le message ne contient rien d'intéressant à retenir
+    - "OUI"
+    - "NON"
   `;
-  console.log(`AI prompt for user info extraction: ${prompt}`);
-  const response = await queryOllamaWithPrompt(prompt);
+  const response = await queryGeminiWithPrompt(prompt, { maxOutputTokens: 3 });
   
   console.log(`AI response for user info extraction: ${response}`);
-  if (response.startsWith("NON")) {
-    return { hasInfo: false, information: "" };
-  } else if (response.startsWith("OUI:")) {
-    const information = response.replace("OUI:", "").trim();
-    return { hasInfo: true, information };
-  } else {
-    // Fallback in case AI doesn't follow exact format
-    return { hasInfo: false, information: "" };
-  }
+  return response.trim().toUpperCase().startsWith("OUI");
+}
+
+/**
+ * Determines if a message is a question and if the AI needs additional information to answer it
+ * @param messageContent - The message content to analyze
+ * @returns Promise<boolean> - true if the message is a question that needs more info, false otherwise
+ */
+export async function queryAIQuestionNeedsInfo(messageContent: string): Promise<boolean> {
+  const prompt = `
+    Analyse ce message et détermine s'il s'agit d'une question ET si tu as besoin d'informations supplémentaires pour y répondre.
+
+    Message: "${messageContent}"
+
+    Réponds "OUI" SEULEMENT si:
+    1. C'est une question (directe ou indirecte)
+    2. ET tu as besoin d'informations supplémentaires pour donner une réponse complète et utile
+
+    Réponds "NON" si:
+    - Ce n'est pas une question
+    - C'est une question mais tu peux y répondre avec tes connaissances actuelles
+    - C'est une question rhétorique ou conversationnelle
+
+    Réponds UNIQUEMENT par:
+    - "OUI" 
+    - "NON"
+  `;
+  const response = await queryGeminiWithPrompt(prompt, { maxOutputTokens: 3 });
+  
+  console.log(`AI response for question analysis: ${response}`);
+  return response.trim().toUpperCase().startsWith("OUI");
 }

@@ -7,6 +7,10 @@ export interface OllamaRequest {
   prompt: string;
   stream: boolean;
   format?: JSONSchema;
+  options?: {
+    num_ctx?: number; // Context size
+    num_predict?: number; // Number of tokens to predict
+  };
 }
 
 export interface JSONSchema {

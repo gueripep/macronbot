@@ -15,6 +15,7 @@ export const commands = [
             option.setName('user')
                 .setDescription('L\'utilisateur concerné (optionnel, par défaut c\'est toi)')
                 .setRequired(false)),
+    new SlashCommandBuilder().setName('trade').setDescription('Lance une recherche et analyse de nouvelles opportunités de trading (max 1 fois par heure)'),
 ].map(command => command.toJSON());
 
 export const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_TOKEN!);

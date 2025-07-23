@@ -14,12 +14,12 @@ async function autoLearnFromMessage(msg: Message, cleanedMessageContent: string)
     console.log(`Auto-learning analysis for ${msg.author.username}:`, userInfoAnalysis);
     
     // If interesting info is found, automatically remember it
-    if (userInfoAnalysis.hasInfo) {
-      console.log(`Auto-learning about ${msg.author.username}: ${userInfoAnalysis.information}`);
+    if (userInfoAnalysis) {
+      console.log(`Auto-learning about ${msg.author.username}: ${cleanedMessageContent}`);
       await RememberService.processRememberCommand(
         msg.author.id,
         msg.author.username,
-        userInfoAnalysis.information
+        cleanedMessageContent
       );
     }
   } catch (error) {
@@ -53,6 +53,16 @@ export async function handleMessage(msg: Message, client: any): Promise<void> {
       const cleanedMessageContent = msg.content
         .replace(`<@${client.user?.id}>`, '')
         .trim();
+      
+      // Check if the message is a question that needs additional information
+      // const needsMoreInfo = await queryAIQuestionNeedsInfo(cleanedMessageContent);
+      
+      // if (needsMoreInfo) {
+      //   //scrape the wiki page https://en.wikipedia.org/w/api.php?action=opensearch&search=
+      //   //
+      //   // scrapeWikipediaPage(searchTerm);
+      //   return;
+      // }
       
       const response = await queryMacronAI(
         pastMessages, 

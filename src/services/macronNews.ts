@@ -1,11 +1,11 @@
-import fetch from "node-fetch";
-import { parseStringPromise } from "xml2js";
-import { queryMacronNews as queryMacronAINews } from "./ollama";
+import { AttachmentBuilder, BaseMessageOptions } from "discord.js";
 import fs from "fs";
+import fetch from "node-fetch";
 import path from "path";
-import { BaseMessageOptions, AttachmentBuilder } from "discord.js";
-import { scrapeArticle } from "./scraper";
+import { parseStringPromise } from "xml2js";
 import { RssFeed, RssItem } from "../types";
+import { queryMacronNews as queryMacronAINews } from "./ollama";
+import { scrapeFranceInfoArticle } from "./scraper";
 
 
 export async function fetchRssFeed(): Promise<RssFeed> {
@@ -88,7 +88,7 @@ async function getNewsImages(rssItems: RssItem[]): Promise<string[]> {
 export async function getMacronNews(): Promise<BaseMessageOptions> {
   const mostImportantNews = await fetchMostImportantNews(1);
   const images = await getNewsImages(mostImportantNews);
-  const article = await scrapeArticle(mostImportantNews[0]);
+  const article = await scrapeFranceInfoArticle(mostImportantNews[0]);
   
   const macronNews = await queryMacronAINews(article);
   

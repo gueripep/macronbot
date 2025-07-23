@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import { clientId } from "./config.js";
 import { commands, rest } from "./deploy-command.js";
 import { handleMessage } from "./handlers/messageHandler.js";
-import { getPortfolioEmbed } from "./services/macron-trade/macron-trade-service.js";
+import { getPortfolioEmbed, handleTradeCommand } from "./services/macron-trade/macron-trade-service.js";
 import { RememberService } from "./services/remember-service.js";
 import { scheduleDailyTasks } from "./services/scheduler.js";
 
@@ -75,6 +75,9 @@ client.on('interactionCreate', async interaction => {
 	}
   else if (commandName === 'remember') {
     await RememberService.handleRememberCommand(interaction);
+  }
+  else if (commandName === 'trade') {
+    await handleTradeCommand(interaction);
   }
 });
 

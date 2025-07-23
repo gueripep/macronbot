@@ -1,8 +1,8 @@
-import cron from "node-cron";
 import { BaseMessageOptions, TextChannel } from "discord.js";
-import { CHANNEL_IDS, dailyMessages, squeegeeChannelId, testChannelId } from "../config.js";
-import { fetchRssFeed, getMacronNews } from "./macronNews.js";
-import { checkAndClosePositions, getPortfolioEmbed, trade } from "./macron-trade/macron-trade-service.js";
+import cron from "node-cron";
+import { squeegeeChannelId } from "../config.js";
+import { checkAndClosePositions, getActiveTradesCount, getPortfolioEmbed, trade } from "./macron-trade/macron-trade-service.js";
+import { getMacronNews } from "./macronNews.js";
 import { queryAIClosedTransationAnalysis } from "./ollama.js";
 
 export function scheduleDailyTasks(client: any): void {
@@ -10,9 +10,17 @@ export function scheduleDailyTasks(client: any): void {
     await sendDailyMessage(client);
   });
 
-  cron.schedule('0 16 * * 4', async (): Promise<void> => {
-    console.log("Running weekly trade method at 4:00 PM on Thursdays");
-    await doWeeklyTrade(client);
+  cron.schedule('0 16 * * 1-5', async (): Promise<void> => {
+    console.log("Checking if we should run trade method at 4:00 PM on weekdays");
+    const activeTradesCount = await getActiveTradesCount();
+    console.log(`Current active trades: ${activeTradesCount}`);
+    
+    if (activeTradesCount < 3) {
+      console.log("Less than 3 active trades, running trade method");
+      await doWeeklyTrade(client);
+    } else {
+      console.log("3 or more active trades, skipping trade execution");
+    }
   });
 
   cron.schedule('50 15 * * 1-5', async (): Promise<void> => {
@@ -70,8 +78,6 @@ export async function checkPositionsAndUpdateEmbed(client: any): Promise<void> {
           embeds: [embed]
         };
         await channel.send(message);
-      } else {
-        // await channel.send("Aucune position à fermer aujourd'hui.");
       }
     }
   }
