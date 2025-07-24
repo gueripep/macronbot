@@ -21,7 +21,7 @@ client.once("ready", (): void => {
   
   const channel = client.channels.cache.get(squeegeeChannelId) as TextChannel;
   if (channel) {
-    const message = "test nouveau message num 2";
+    const message = "test nouveau message num 3";
     channel.send(message);
   }
   try {
