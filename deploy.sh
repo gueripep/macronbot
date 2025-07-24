@@ -1,5 +1,6 @@
 #!/bin/bash
-# In order to get the commit message
+# log into a file
+exec > >(tee -i ~/webhooks/deploy.log)
 
 commit_message=$1
 echo "Received commit message: $commit_message"
