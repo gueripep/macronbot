@@ -11,9 +11,6 @@ import {
 import { ClosedTransaction } from "../types/ClosedTransaction.js";
 import { RememberService } from "./remember-service.js";
 
-// The client gets the API key from the environment variable `GEMINI_API_KEY`.
-import dotenv from "dotenv";
-dotenv.config();
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 

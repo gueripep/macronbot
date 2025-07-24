@@ -1,5 +1,4 @@
 import { Client, GatewayIntentBits, Routes } from "discord.js";
-import dotenv from "dotenv";
 import { clientId } from "./config.js";
 import { commands, rest } from "./deploy-command.js";
 import { handleMessage } from "./handlers/messageHandler.js";
@@ -7,7 +6,6 @@ import { getPortfolioEmbed, handleTradeCommand } from "./services/macron-trade/m
 import { RememberService } from "./services/remember-service.js";
 import { scheduleDailyTasks } from "./services/scheduler.js";
 
-dotenv.config();
 
 const client = new Client({
   intents: [

@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
 
-dotenv.config();
 
 /**
  * Service for fetching and caching stock price data from multiple APIs

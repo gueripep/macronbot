@@ -2,7 +2,7 @@ import { REST, Routes, SlashCommandBuilder } from "discord.js";
 import dotenv from "dotenv";
 import { clientId } from "./config.js";
 
-dotenv.config();
+dotenv.config({ path: '../.env' });
 
 export const commands = [
     new SlashCommandBuilder().setName('portfolio').setDescription('Je réponds avec mes positions actuelles'),

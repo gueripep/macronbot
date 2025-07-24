@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
 
-dotenv.config();
 
 const PANDASCORE_TOKEN = process.env.PANDASCORE_TOKEN;
 
