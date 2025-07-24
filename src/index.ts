@@ -16,7 +16,7 @@ const client = new Client({
 });
 
 client.once("ready", (): void => {
-  console.log("webhook is 2");
+  console.log("webhook is 3");
   console.log(`Logged in as ${client.user?.tag}`);
   try {
     scheduleDailyTasks(client);
