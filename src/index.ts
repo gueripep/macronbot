@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, Routes, TextChannel } from "discord.js";
-import { clientId, testChannelId } from "./config.js";
+import { clientId, squeegeeChannelId } from "./config.js";
 import { commands, rest } from "./deploy-command.js";
 import { handleMessage } from "./handlers/messageHandler.js";
 import { getPortfolioEmbed, handleTradeCommand } from "./services/macron-trade/macron-trade-service.js";
@@ -19,9 +19,9 @@ client.once("ready", (): void => {
   console.log("webhook is 3");
   console.log(`Logged in as ${client.user?.tag}`);
   
-  const channel = client.channels.cache.get(testChannelId) as TextChannel;
+  const channel = client.channels.cache.get(squeegeeChannelId) as TextChannel;
   if (channel) {
-    const message = "macron up";
+    const message = "test nouveau message";
     channel.send(message);
   }
   try {
