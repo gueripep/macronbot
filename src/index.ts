@@ -16,14 +16,8 @@ const client = new Client({
 });
 
 client.once("ready", (): void => {
-  console.log("webhook is 3");
   console.log(`Logged in as ${client.user?.tag}`);
   
-  const channel = client.channels.cache.get(squeegeeChannelId) as TextChannel;
-  if (channel) {
-    const message = "test nouveau message num 3";
-    channel.send(message);
-  }
   try {
     scheduleDailyTasks(client);
   } catch (error) {
@@ -91,3 +85,13 @@ await rest.put(
 	{ body: commands },
 );
 
+
+process.on('message', (packet: any) => {
+  if (packet.type === 'trigger-action') {
+    // Your action here
+    const channel = client.channels.cache.get(squeegeeChannelId) as TextChannel;
+    if (channel) {
+      channel.send("Triggered by PM2 message!");
+    }
+  }
+});
