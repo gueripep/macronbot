@@ -1,6 +1,6 @@
 import { Client, TextChannel } from "discord.js";
 import express from "express";
-import { squeegeeChannelId } from "./config.js";
+import { testChannelId } from "./config.js";
 import { queryGeminiWithPrompt } from "./services/ollama.js";
 
 /**
@@ -70,7 +70,7 @@ export class TriggerServer {
     // Ask AI to explain the commit/trigger message as Emmanuel Macron
     const macronResponse = await this.generateMacronResponse(message);
 
-    const channel = this.client.channels.cache.get(squeegeeChannelId) as TextChannel;
+    const channel = this.client.channels.cache.get(testChannelId) as TextChannel;
     if (channel) {
       await channel.send(macronResponse);
     } else {
