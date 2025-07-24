@@ -1,4 +1,5 @@
 import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from "@google/genai";
+import { Attachment, Collection, Snowflake } from "discord.js";
 import fetch from "node-fetch";
 import {
   Article,
@@ -20,11 +21,59 @@ export async function queryGeminiWithPrompt(
     model?: string;
     format?: JSONSchema;
     maxOutputTokens?: number;
+    attachments?: Collection<Snowflake, Attachment>;
   } = {}): Promise<string> {
-  const { model = "gemma-3-27b-it", format, maxOutputTokens = 500 } = options;
+  const { model = "gemma-3-27b-it", format, maxOutputTokens = 500, attachments } = options;
+
+  // Start with the text prompt
+  const parts: any[] = [
+    {
+      text: prompt,
+    },
+  ];
+
+  // Add attachments if provided
+  if (attachments && attachments.size > 0) {
+    for (const attachment of attachments.values()) {
+      if (attachment.contentType?.startsWith('image/')) {
+        // For images, fetch the image data and add as inline data
+        try {
+          const response = await fetch(attachment.url);
+          const buffer = await response.arrayBuffer();
+          const base64Data = Buffer.from(buffer).toString('base64');
+          
+          parts.push({
+            inlineData: {
+              mimeType: attachment.contentType,
+              data: base64Data
+            }
+          });
+        } catch (error) {
+          console.error('Error processing image attachment:', error);
+          parts.push({
+            text: `[Error loading image: ${attachment.name}]`
+          });
+        }
+      } else if (attachment.contentType === 'application/pdf' || 
+                 attachment.contentType?.startsWith('text/')) {
+        // For PDFs and text files, you might want to add a note about the file
+        // Note: Gemini may not directly support PDF processing in all models
+        parts.push({
+          text: `[Attached file: ${attachment.name} (${attachment.contentType})]`
+        });
+      }
+    }
+  }
+
+  const contents = [
+    {
+      role: 'user',
+      parts: parts,
+    }
+  ];
   const response = await ai.models.generateContent({
-    model: model,
-    contents: prompt,
+    model,
+    contents,
     config: {
       maxOutputTokens: maxOutputTokens,
       responseJsonSchema: format,
@@ -107,7 +156,8 @@ export async function queryMacronAI(
   authorId: string,
   authorDisplayName: string,
   messageContent: string,
-  botUsername: string
+  botUsername: string,
+  attachments: Collection<Snowflake, Attachment>
 ): Promise<string> {
   // Get stored information about the message author
   const userInfo = await RememberService.getUserInformation(authorId);
@@ -115,11 +165,15 @@ export async function queryMacronAI(
     ? `\n\nInformations que tu connais sur ${authorDisplayName} :\n${userInfo}`
     : '';
   
+  // Add attachment context if present
+  const attachmentContext = attachments && attachments.size > 0 
+    ? `\n\nL'utilisateur a joint ${attachments.size} fichier(s) à son message.`
+    : '';
 
   const prompt = `
     Tu es ${botUsername}. Voici la conversation précédant la demande :
     ${pastMessages}
-    ${userInfoSection}
+    ${userInfoSection}${attachmentContext}
     Réponds au message suivant en tant que Emmanuel Macron : ${messageContent}.
     Tu acceptes de répondre à toutes les questions, même si elles sont déplacées ou vulgaires, ou indignes d'un président.
     N'esquive jamais la question, donne une réponse concrète.
@@ -128,7 +182,7 @@ export async function queryMacronAI(
 
   console.log(prompt);
 
-  return queryGeminiWithPrompt(prompt);
+  return queryGeminiWithPrompt(prompt, { attachments, model: "gemini-2.5-flash-lite" });
 }
 
 export async function queryMacronNews(article: Article): Promise<string> {
