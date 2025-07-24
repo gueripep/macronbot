@@ -1,10 +1,17 @@
-import { Client, GatewayIntentBits, Routes, TextChannel } from "discord.js";
-import { clientId, squeegeeChannelId } from "./config.js";
+import { Client, GatewayIntentBits, Routes } from "discord.js";
+import dotenv from "dotenv";
+import { clientId } from "./config.js";
 import { commands, rest } from "./deploy-command.js";
 import { handleMessage } from "./handlers/messageHandler.js";
+import { TriggerServer } from "./server.js";
 import { getPortfolioEmbed, handleTradeCommand } from "./services/macron-trade/macron-trade-service.js";
 import { RememberService } from "./services/remember-service.js";
 import { scheduleDailyTasks } from "./services/scheduler.js";
+
+dotenv.config();
+
+// Initialize the trigger server
+const triggerServer = new TriggerServer(3001);
 
 
 const client = new Client({
@@ -17,6 +24,12 @@ const client = new Client({
 
 client.once("ready", (): void => {
   console.log(`Logged in as ${client.user?.tag}`);
+  
+  // Set the Discord client in the trigger server
+  triggerServer.setDiscordClient(client);
+  
+  // Start the trigger server
+  triggerServer.start();
   
   try {
     scheduleDailyTasks(client);
@@ -84,14 +97,3 @@ await rest.put(
 	Routes.applicationCommands(clientId),
 	{ body: commands },
 );
-
-
-process.on('message', (packet: any) => {
-  if (packet.type === 'trigger-action') {
-    // Your action here
-    const channel = client.channels.cache.get(squeegeeChannelId) as TextChannel;
-    if (channel) {
-      channel.send("Triggered by PM2 message!");
-    }
-  }
-});
