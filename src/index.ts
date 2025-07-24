@@ -21,7 +21,7 @@ client.once("ready", (): void => {
   
   const channel = client.channels.cache.get(squeegeeChannelId) as TextChannel;
   if (channel) {
-    const message = "test nouveau message";
+    const message = "test nouveau message num 2";
     channel.send(message);
   }
   try {
@@ -90,3 +90,4 @@ await rest.put(
 	Routes.applicationCommands(clientId),
 	{ body: commands },
 );
+
