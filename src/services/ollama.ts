@@ -1,5 +1,4 @@
 import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from "@google/genai";
-import { Attachment, Collection, Snowflake } from "discord.js";
 import fetch from "node-fetch";
 import {
   Article,
@@ -21,54 +20,15 @@ export async function queryGeminiWithPrompt(
     model?: string;
     format?: JSONSchema;
     maxOutputTokens?: number;
-    attachments?: Collection<Snowflake, Attachment>;
+    parts?: any[];
   } = {}): Promise<string> {
-  const { model = "gemma-3-27b-it", format, maxOutputTokens = 500, attachments } = options;
+  const { model = "gemma-3-27b-it", format, maxOutputTokens = 500, parts } = options;
 
-  // Start with the text prompt
-  const parts: any[] = [
-    {
-      text: prompt,
-    },
-  ];
-
-  // Add attachments if provided
-  if (attachments && attachments.size > 0) {
-    for (const attachment of attachments.values()) {
-      if (attachment.contentType?.startsWith('image/')) {
-        // For images, fetch the image data and add as inline data
-        try {
-          const response = await fetch(attachment.url);
-          const buffer = await response.arrayBuffer();
-          const base64Data = Buffer.from(buffer).toString('base64');
-          
-          parts.push({
-            inlineData: {
-              mimeType: attachment.contentType,
-              data: base64Data
-            }
-          });
-        } catch (error) {
-          console.error('Error processing image attachment:', error);
-          parts.push({
-            text: `[Error loading image: ${attachment.name}]`
-          });
-        }
-      } else if (attachment.contentType === 'application/pdf' || 
-                 attachment.contentType?.startsWith('text/')) {
-        // For PDFs and text files, you might want to add a note about the file
-        // Note: Gemini may not directly support PDF processing in all models
-        parts.push({
-          text: `[Attached file: ${attachment.name} (${attachment.contentType})]`
-        });
-      }
-    }
-  }
-
+  // If parts are provided, use them directly; otherwise create from prompt
   const contents = [
     {
       role: 'user',
-      parts: parts,
+      parts: parts || [{ text: prompt }],
     }
   ];
   const response = await ai.models.generateContent({
@@ -157,8 +117,13 @@ export async function queryMacronAI(
   authorDisplayName: string,
   messageContent: string,
   botUsername: string,
-  attachments: Collection<Snowflake, Attachment>
+  options: {
+    attachmentParts?: any[];
+    hasAttachments?: boolean;
+  } = {}
 ): Promise<string> {
+  const { attachmentParts = [], hasAttachments = false } = options;
+  
   // Get stored information about the message author
   const userInfo = await RememberService.getUserInformation(authorId);
   const userInfoSection = userInfo 
@@ -166,8 +131,8 @@ export async function queryMacronAI(
     : '';
   
   // Add attachment context if present
-  const attachmentContext = attachments && attachments.size > 0 
-    ? `\n\nL'utilisateur a joint ${attachments.size} fichier(s) à son message.`
+  const attachmentContext = hasAttachments 
+    ? `\n\nL'utilisateur a joint des fichier(s) à son message.`
     : '';
 
   const prompt = `
@@ -180,9 +145,18 @@ export async function queryMacronAI(
     Ta réponse doit faire environ 20 mots. N'hésite pas à mentionner le nom de celui qui fait la demande : ${authorDisplayName}
     N'écris ABSOLUMENT rien d'autre que ce que Macron dirait`;
 
-  console.log(prompt);
+  // Start with the text prompt and add any attachment parts
+  const parts: any[] = [
+    { text: prompt },
+    ...attachmentParts
+  ];
 
-  return queryGeminiWithPrompt(prompt, { attachments, model: "gemini-2.5-flash-lite" });
+  console.log(prompt);
+  const model = hasAttachments
+    ? "gemini-2.5-flash-lite"
+    : "gemma-3-27b-it";
+
+  return queryGeminiWithPrompt(prompt, { parts, model });
 }
 
 export async function queryMacronNews(article: Article): Promise<string> {
