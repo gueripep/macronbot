@@ -4,7 +4,7 @@ import { commands, rest } from "./deploy-command.js";
 import { handleMessage } from "./handlers/messageHandler.js";
 import { getPortfolioEmbed, handleTradeCommand } from "./services/macron-trade/macron-trade-service.js";
 import { RememberService } from "./services/remember-service.js";
-import { scheduleDailyTasks, sendDailyMessage } from "./services/scheduler.js";
+import { scheduleDailyTasks } from "./services/scheduler.js";
 
 
 const client = new Client({
@@ -20,7 +20,6 @@ client.once("ready", (): void => {
   console.log(`Logged in as ${client.user?.tag}`);
   try {
     scheduleDailyTasks(client);
-    sendDailyMessage(client);
   } catch (error) {
     console.error("Error scheduling daily messages:", error);
   }
