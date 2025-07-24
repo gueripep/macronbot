@@ -1,5 +1,5 @@
-import { Client, GatewayIntentBits, Routes } from "discord.js";
-import { clientId } from "./config.js";
+import { Client, GatewayIntentBits, Routes, TextChannel } from "discord.js";
+import { clientId, testChannelId } from "./config.js";
 import { commands, rest } from "./deploy-command.js";
 import { handleMessage } from "./handlers/messageHandler.js";
 import { getPortfolioEmbed, handleTradeCommand } from "./services/macron-trade/macron-trade-service.js";
@@ -18,6 +18,12 @@ const client = new Client({
 client.once("ready", (): void => {
   console.log("webhook is 3");
   console.log(`Logged in as ${client.user?.tag}`);
+  
+  const channel = client.channels.cache.get(testChannelId) as TextChannel;
+  if (channel) {
+    const message = "macron up";
+    channel.send(message);
+  }
   try {
     scheduleDailyTasks(client);
   } catch (error) {
