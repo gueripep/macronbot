@@ -1,10 +1,8 @@
 import { DailyWordleService, LetterState, SolveResult, solveWordle } from "@gueripep/wordle-solver";
-import { BaseMessageOptions, Channel, ChatInputCommandInteraction, TextChannel } from "discord.js";
-import { testChannelId } from "../config";
+import { BaseMessageOptions, ChatInputCommandInteraction, TextChannel } from "discord.js";
+import { squeegeeChannelId } from "../config.js";
 
-export async function getWordleSolvingMessage(
-  channel: Channel
-): Promise<BaseMessageOptions> {
+export async function getWordleSolvingMessage(): Promise<BaseMessageOptions> {
     const wordle = await DailyWordleService.getTodaysWordle();
     const solution = wordle.solution.toUpperCase();
     const solveResult = await solveWordle(solution, 6);
@@ -57,21 +55,19 @@ export async function getWordleSolveResultMessage(
 }
 
 export async function handleWordleCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-    // Defer the reply since trading analysis might take some time
-    // await interaction.deferReply();
     const channel = interaction.channel;
     if (!channel) return;
 
-    const message = await getWordleSolvingMessage(channel);
+    const message = await getWordleSolvingMessage();
     await interaction.reply(message);
 }
 
 export async function sendDailyWordleMessage(client: any): Promise<void> {
     console.log("Daily Wordle message sent at:", new Date().toISOString());
     
-    const channel = client.channels.cache.get(testChannelId) as TextChannel;
+    const channel = client.channels.cache.get(squeegeeChannelId) as TextChannel;
     if (channel) {
-        const message = await getWordleSolvingMessage(channel);
+        const message = await getWordleSolvingMessage();
         await channel.send(message);
     }
 }

@@ -6,10 +6,12 @@
   "scripts": {
     "build": "tsc",
     "start": "tsx src/index.ts",
+    "start:dist": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "setup-db": "tsx src/dbSetup.ts",
+    "setup-db:dist": "node dist/dbSetup.js",
     "deploy-commands": "tsx src/deploy-command.ts",
-    "debug-scheduler": "tsx tests/debug-scheduler.ts",
+    "deploy-commands:dist": "node dist/deploy-command.js",
     "test": "jest"
   },
   "keywords": [],
