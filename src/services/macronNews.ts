@@ -36,18 +36,6 @@ async function fetchMostImportantNews(newsNb: number): Promise<RssItem[]> {
   return rssFeed.items.slice(0, newsNb);
 }
 
-async function getNewsString(mostImportantNews: RssItem[]) {
-	
-  return mostImportantNews
-    .map(
-      (news, idx) =>
-        `News numéro ${idx + 1} :\n${news.title}\n${
-          news.description || "Pas de description disponible."
-        }`
-    )
-    .join("\n\n");
-}
-
 async function getNewsImages(rssItems: RssItem[]): Promise<string[]> {
   //save the image locally from the rss feed returns the local path list
   const imagePaths: string[] = [];

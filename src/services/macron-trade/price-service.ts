@@ -11,7 +11,7 @@ export class PriceService {
    * @returns Database connection object
    */
   private static async getDB() {
-    return (await import("../../dbSetup")).default;
+    return (await import("../../dbSetup.js")).default;
   }
 
   /**

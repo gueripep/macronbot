@@ -3,6 +3,7 @@ import cron from "node-cron";
 import { squeegeeChannelId } from "../config.js";
 import { checkAndClosePositions, getActiveTradesCount, getPortfolioEmbed, trade } from "./macron-trade/macron-trade-service.js";
 import { getMacronNews } from "./macronNews.js";
+import { sendDailyWordleMessage } from "./macronWordle.js";
 import { queryAIClosedTransationAnalysis } from "./ollama.js";
 
 export function scheduleDailyTasks(client: any): void {
@@ -26,6 +27,11 @@ export function scheduleDailyTasks(client: any): void {
   cron.schedule('50 15 * * 1-5', async (): Promise<void> => {
     console.log("Running check positions and update embed at 3:50 PM on weekdays");
     await checkPositionsAndUpdateEmbed(client);
+  });
+
+  //wordle
+  cron.schedule('0 9 * * *', async (): Promise<void> => {
+    sendDailyWordleMessage(client);
   });
   
 }

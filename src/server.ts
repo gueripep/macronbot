@@ -1,6 +1,5 @@
-import { Client, TextChannel } from "discord.js";
+import { Client } from "discord.js";
 import express from "express";
-import { testChannelId } from "./config.js";
 import { queryGeminiWithPrompt } from "./services/ollama.js";
 
 /**
@@ -70,11 +69,18 @@ export class TriggerServer {
     // Ask AI to explain the commit/trigger message as Emmanuel Macron
     const macronResponse = await this.generateMacronResponse(message);
 
-    const channel = this.client.channels.cache.get(testChannelId) as TextChannel;
-    if (channel) {
-      await channel.send(macronResponse);
+    // Get user ID from environment variable
+    const triggerUserId = process.env.TRIGGER_USER_ID;
+    if (!triggerUserId) {
+      console.error('TRIGGER_USER_ID environment variable not set');
+      return;
+    }
+
+    const user = await this.client.users.fetch(triggerUserId);
+    if (user) {
+      await user.send(macronResponse);
     } else {
-      console.error('Could not find Discord channel for trigger');
+      console.error('Could not find Discord user for trigger');
     }
   }
 

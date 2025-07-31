@@ -3,7 +3,7 @@ import { PriceService } from "./price-service.js";
 
 export class PortfolioService {
   private static async getDB() {
-    return (await import("../../dbSetup")).default;
+    return (await import("../../dbSetup.js")).default;
   }
 
   static async getInvestedAmount(): Promise<number> {

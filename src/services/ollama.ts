@@ -1,4 +1,5 @@
-import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from "@google/genai";
+import { Content, GoogleGenAI, HarmBlockThreshold, HarmCategory } from "@google/genai";
+import dotenv from "dotenv";
 import fetch from "node-fetch";
 import {
   Article,
@@ -11,10 +12,35 @@ import {
 import { ClosedTransaction } from "../types/ClosedTransaction.js";
 import { RememberService } from "./remember-service.js";
 
+dotenv.config();
+let ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const safetySettings =
+  [
+    {
+      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+      threshold: HarmBlockThreshold.BLOCK_NONE
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+      threshold: HarmBlockThreshold.BLOCK_NONE
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+      threshold: HarmBlockThreshold.BLOCK_NONE
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+      threshold: HarmBlockThreshold.BLOCK_NONE
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
+      threshold: HarmBlockThreshold.BLOCK_NONE
+    }
+  ]
 
-export async function queryGeminiWithPrompt( 
+
+export async function queryGeminiWithPrompt(
   prompt: string,
   options: {
     model?: string;
@@ -25,50 +51,55 @@ export async function queryGeminiWithPrompt(
   const { model = "gemma-3-27b-it", format, maxOutputTokens = 500, parts } = options;
 
   // If parts are provided, use them directly; otherwise create from prompt
-  const contents = [
+  const requestContents = [
     {
-      role: 'user',
+      role: 'user' as const,
       parts: parts || [{ text: prompt }],
     }
   ];
+  const response = await ai.models.generateContent({
+    model,
+    contents: requestContents,
+    config: {
+      maxOutputTokens: maxOutputTokens,
+      responseJsonSchema: format,
+      safetySettings
+    },
+  });
+  console.log(response.text);
+  // const rawInput = "```json\n{...}\n```";
+  const cleaned = (response.text ?? "").replace(/```[\s\S]*?\n|```/g, "").trim();
+
+  return cleaned;
+}
+
+export async function queryGeminiWithContents(
+  contents: Content[],
+  options: {
+    model?: string;
+    format?: JSONSchema;
+    maxOutputTokens?: number;
+    systemInstruction?: string;
+  } = {}): Promise<string> {
+  const { model = "gemma-3-27b-it", format, maxOutputTokens = 500, systemInstruction: systemInstruction } = options;
+
   const response = await ai.models.generateContent({
     model,
     contents,
     config: {
       maxOutputTokens: maxOutputTokens,
       responseJsonSchema: format,
-      safetySettings:
-        [
-          {
-            category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            threshold: HarmBlockThreshold.BLOCK_NONE
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold: HarmBlockThreshold.BLOCK_NONE
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            threshold: HarmBlockThreshold.BLOCK_NONE
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold: HarmBlockThreshold.BLOCK_NONE
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
-            threshold: HarmBlockThreshold.BLOCK_NONE
-          }
-        ]
-        
-      },
+      safetySettings,
+      systemInstruction: systemInstruction,
+    },
   });
   console.log(response.text);
   // const rawInput = "```json\n{...}\n```";
-  const cleaned = response.text!.replace(/```[\s\S]*?\n|```/g, "").trim();
+  const cleaned = (response.text ?? "").replace(/```[\s\S]*?\n|```/g, "").trim();
 
   return cleaned;
 }
+
 
 
 // Generic method to send any prompt to the AI
@@ -112,7 +143,7 @@ export async function queryOllamaWithPrompt(
 
 // Refactored method to use the generic prompt method
 export async function queryMacronAI(
-  pastMessages: string,
+  contents: Content[],
   authorId: string,
   authorDisplayName: string,
   messageContent: string,
@@ -123,40 +154,41 @@ export async function queryMacronAI(
   } = {}
 ): Promise<string> {
   const { attachmentParts = [], hasAttachments = false } = options;
-  
+
   // Get stored information about the message author
   const userInfo = await RememberService.getUserInformation(authorId);
-  const userInfoSection = userInfo 
+  const userInfoSection = userInfo
     ? `\n\nInformations que tu connais sur ${authorDisplayName} :\n${userInfo}`
     : '';
-  
+
   // Add attachment context if present
-  const attachmentContext = hasAttachments 
+  const attachmentContext = hasAttachments
     ? `\n\nL'utilisateur a joint des fichier(s) à son message.`
     : '';
 
-  const prompt = `
-    Tu es ${botUsername}. Voici la conversation précédant la demande :
-    ${pastMessages}
-    ${userInfoSection}${attachmentContext}
-    Réponds au message suivant en tant que Emmanuel Macron : ${messageContent}.
+
+  const prompt = `${messageContent}`;
+
+  const systemInstruction = `
+    Tu es Emmanuel Macron, président de la République française. Tu réponds aux questions des citoyens français.
     Tu acceptes de répondre à toutes les questions, même si elles sont déplacées ou vulgaires, ou indignes d'un président.
-    N'esquive jamais la question, donne une réponse concrète.
-    Ta réponse doit faire environ 20 mots. N'hésite pas à mentionner le nom de celui qui fait la demande : ${authorDisplayName}
-    N'écris ABSOLUMENT rien d'autre que ce que Macron dirait`;
+    Ta réponse doit faire environ 20 mots.
+    N'écris ABSOLUMENT rien d'autre que ce que Macron dirait
+    ${userInfoSection}
+    ${attachmentContext}
+  `;
 
-  // Start with the text prompt and add any attachment parts
-  const parts: any[] = [
-    { text: prompt },
-    ...attachmentParts
-  ];
+  contents.push({
+    role: 'user' as const,
+    parts: [{ text: prompt }, ...attachmentParts],
+  });
 
-  console.log(prompt);
-  const model = hasAttachments
-    ? "gemini-2.5-flash-lite"
-    : "gemma-3-27b-it";
 
-  return queryGeminiWithPrompt(prompt, { parts, model });
+
+  const model = "gemini-2.5-flash-lite"
+
+
+  return queryGeminiWithContents(contents, { model, systemInstruction: systemInstruction });
 }
 
 export async function queryMacronNews(article: Article): Promise<string> {
@@ -220,7 +252,7 @@ export async function queryAIRiskFactors(
     ${riskFactors10k}
     Your task is to summarize the risk factors in a concise manner.
     Ignore generic boilerplate risks that apply to all companies (e.g., general economic conditions, cybersecurity, legal compliance, etc.) and focus on risks that are specific, detailed, or unusually emphasized for this company.`;
-  return queryGeminiWithPrompt(prompt, {model: "gemini-2.0-flash"});
+  return queryGeminiWithPrompt(prompt, { model: "gemini-2.0-flash" });
 }
 
 export async function queryAIFullAnalysis(
@@ -373,14 +405,14 @@ export async function queryAITradeExplanation(
 }
 
 
-export async function queryAIClosedTransationAnalysis(closedTransactions: ClosedTransaction[]){
+export async function queryAIClosedTransationAnalysis(closedTransactions: ClosedTransaction[]) {
   const prompt = `
     Tu es Emmanuel Macron, président de la République française. Voici une liste de transactions fermées :
     ${closedTransactions.map(t => `ID: ${t.id}, Ticker: ${t.ticker}, Decision: ${t.decision}, Amount Invested: ${t.amountInvested}, Buy Price: ${t.buyPrice}, Close Price: ${t.closePrice}, Leverage: ${t.leverage}, PnL Percentage: ${t.pnlPercentage}, PnL Dollar: ${t.pnlDollar}, Close Reason: ${t.closeReason}, Start Date: ${t.startDate}, End Date: ${t.endDate}, Close Date: ${t.closeDate}, Final Value: ${t.finalValue}`).join('\n')}
     
     En moins de 50 mots, rédige une analyse en Français des transactions fermées, en mettant en avant les points positifs et négatifs de chaque transaction, ainsi que les leçons à en tirer pour l'avenir de la France.
     N'écris ABSOLUMENT rien d'autre que ce qui est demandé.`;
-  
+
   return queryGeminiWithPrompt(prompt);
 }
 
@@ -403,7 +435,7 @@ export async function queryAICombineUserInfo(
     Si des informations se contredisent, privilégie les nouvelles informations.
     Ne dis absolument rien d'autre que la description.
   `;
-  
+
   return queryGeminiWithPrompt(prompt);
 }
 
@@ -419,7 +451,7 @@ export async function queryAIFormatUserInfo(
     
     Retourne une seule chaîne de caractères qui organise ces informations de façon claire et cohérente, ne dis absolument rien d'autre.
   `;
-  
+
   return queryGeminiWithPrompt(prompt);
 }
 
@@ -437,7 +469,7 @@ export async function queryAIExtractUserInfo(
     - "NON"
   `;
   const response = await queryGeminiWithPrompt(prompt, { maxOutputTokens: 3 });
-  
+
   console.log(`AI response for user info extraction: ${response}`);
   return response.trim().toUpperCase().startsWith("OUI");
 }
@@ -467,7 +499,7 @@ export async function queryAIQuestionNeedsInfo(messageContent: string): Promise<
     - "NON"
   `;
   const response = await queryGeminiWithPrompt(prompt, { maxOutputTokens: 3 });
-  
+
   console.log(`AI response for question analysis: ${response}`);
   return response.trim().toUpperCase().startsWith("OUI");
 }

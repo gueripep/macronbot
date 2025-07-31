@@ -1,10 +1,9 @@
-import { Client, GatewayIntentBits, Routes } from "discord.js";
+import { Client, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
-import { clientId } from "./config.js";
-import { commands, rest } from "./deploy-command.js";
 import { handleMessage } from "./handlers/messageHandler.js";
 import { TriggerServer } from "./server.js";
 import { getPortfolioEmbed, handleTradeCommand } from "./services/macron-trade/macron-trade-service.js";
+import { handleWordleCommand } from "./services/macronWordle.js";
 import { RememberService } from "./services/remember-service.js";
 import { scheduleDailyTasks } from "./services/scheduler.js";
 
@@ -91,9 +90,8 @@ client.on('interactionCreate', async interaction => {
   else if (commandName === 'trade') {
     await handleTradeCommand(interaction);
   }
-});
+  else if (commandName === 'wordle') {
+    await handleWordleCommand(interaction);
+  }
 
-await rest.put(
-	Routes.applicationCommands(clientId),
-	{ body: commands },
-);
+});

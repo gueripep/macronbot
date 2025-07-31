@@ -1,3 +1,4 @@
+import { Content } from "@google/genai";
 import { Message } from "discord.js";
 import fetch from "node-fetch";
 import { CHANNEL_IDS } from "../config.js";
@@ -85,10 +86,39 @@ export async function handleMessage(msg: Message, client: any): Promise<void> {
 
 
     const history = await msg.channel.messages.fetch({ limit: 10 });
-    const pastMessages = Array.from(history.values())
-      .reverse()
-      .map((m: Message): string => `${m.author.username}: ${m.content}`)
-      .join("\n");
+    
+    // Build conversation history in the format expected by Gemini
+    const contents: Content[] = [];
+    const messages = Array.from(history.values()).reverse();
+    
+    for (const message of messages) {
+      // Skip the current message as it will be processed separately
+      if (message.id === msg.id) continue;
+      
+      // Clean message content
+      const cleanContent = message.content
+        .replace(/<@\d+>/g, (match) => {
+          const mention = message.mentions.users.find((user:any) => user.id === match);
+          return mention ? mention.displayName : match;
+        }) // Remove all user mentions
+        .trim();
+      
+      if (!cleanContent) continue; // Skip empty messages
+      
+      if (message.author.bot && message.author.id === client.user?.id) {
+        // This is a bot response
+        contents.push({
+          role: 'model',
+          parts: [{ text: cleanContent }]
+        });
+      } else {
+        // This is a user message (a bot message is considered a user message if it's another bot)
+        contents.push({
+          role: 'user',
+          parts: [{ text: `${message.author.displayName}: ${cleanContent}` }]
+        });
+      }
+    }
 
     // Filter out bot mention from the message content to reduce noise
     const cleanedMessageContent = msg.content
@@ -100,7 +130,7 @@ export async function handleMessage(msg: Message, client: any): Promise<void> {
     const hasAttachments = msg.attachments.size > 0;
 
     const response = await queryMacronAI(
-      pastMessages,
+      contents,
       msg.author.id,
       msg.author.displayName,
       cleanedMessageContent,

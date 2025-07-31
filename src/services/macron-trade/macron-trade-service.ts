@@ -443,7 +443,7 @@ export class TradingService {
    * @returns Database connection object
    */
   private static async getDB() {
-    return (await import("../../dbSetup")).default;
+    return (await import("../../dbSetup.js")).default;
   }
   /**
    * Gets the count of currently active trading positions

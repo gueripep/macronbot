@@ -8,6 +8,7 @@
     "start": "tsx src/index.ts",
     "dev": "tsx src/index.ts",
     "setup-db": "tsx src/dbSetup.ts",
+    "deploy-commands": "tsx src/deploy-command.ts",
     "debug-scheduler": "tsx tests/debug-scheduler.ts",
     "test": "jest"
   },
@@ -19,6 +20,7 @@
     "@discordjs/builders": "^1.11.2",
     "@discordjs/rest": "^2.5.1",
     "@google/genai": "^1.10.0",
+    "@gueripep/wordle-solver": "^2.0.2",
     "better-sqlite3": "^12.2.0",
     "cheerio": "^1.1.0",
     "discord-api-types": "^0.38.16",
