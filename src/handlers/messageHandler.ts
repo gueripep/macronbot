@@ -122,21 +122,10 @@ async function autoLearnFromMessage(msg: Message, cleanedMessageContent: string)
   }
 }
 
-export async function handleMessage(msg: Message, client: any): Promise<void> {
-  if (msg.mentions.has(client.user!) && msg.author.id !== client.user?.id && !msg.author.bot) {
-    
-    if (!CHANNEL_IDS.includes(msg.channel.id)) {
-      await msg.reply("Je réponds que dans le channel de mon gars sûr, déso");
-      return;
-    }
+export async function getConversationInGeminiFormat(msg: Message, client: any): Promise<Content[]> {
+      const history = await msg.channel.messages.fetch({ limit: 10 });
 
-    if (msg.channel.isTextBased() && 'sendTyping' in msg.channel) {
-      await msg.channel.sendTyping();
-    }
-
-    const history = await msg.channel.messages.fetch({ limit: 10 });
-    
-    // Build conversation history in the format expected by Gemini
+// Build conversation history in the format expected by Gemini
     const contents: Content[] = [];
     const messages = Array.from(history.values()).reverse();
     
@@ -176,27 +165,37 @@ export async function handleMessage(msg: Message, client: any): Promise<void> {
 
     // Process attachments for Gemini
     const attachmentParts = await processAttachments(msg.attachments);
-    const hasAttachments = msg.attachments.size > 0;
 
     contents.push({
       role: 'user' as const,
       parts: [{ text: cleanedMessageContent }, ...attachmentParts],
     });
 
+    return contents;
+}
+
+
+export async function handleMessage(msg: Message, client: any): Promise<void> {
+  if (msg.mentions.has(client.user!) && msg.author.id !== client.user?.id && !msg.author.bot) {
+    
+    if (!CHANNEL_IDS.includes(msg.channel.id)) {
+      await msg.reply("Je réponds que dans le channel de mon gars sûr, déso");
+      return;
+    }
+
+    if (msg.channel.isTextBased() && 'sendTyping' in msg.channel) {
+      await msg.channel.sendTyping();
+    }
+
+    const contents = await getConversationInGeminiFormat(msg, client);
     const relevantInfo = await getRelevantInformation(contents);
 
 
     const response = await queryMacronAI(
       contents,
-      msg.author.id,
-      msg.author.displayName,
-      cleanedMessageContent,
-      { attachmentParts, hasAttachments, relevantInfo }
+      relevantInfo
     );
     await msg.reply(response);
-
-    // Auto-learn from the user's message (runs in background)
-    await autoLearnFromMessage(msg, cleanedMessageContent);
-
+    await autoLearnFromMessage(msg, contents[contents.length - 1].parts![0].text!);
   }
 }

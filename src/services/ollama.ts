@@ -10,7 +10,6 @@ import {
   RedditRssItem
 } from "../types.js";
 import { ClosedTransaction } from "../types/ClosedTransaction.js";
-import { RememberService } from "./remember-service.js";
 
 dotenv.config();
 let ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -143,25 +142,10 @@ export async function queryOllamaWithPrompt(
 // Refactored method to use the generic prompt method
 export async function queryMacronAI(
   contents: Content[],
-  authorId: string,
-  authorDisplayName: string,
-  messageContent: string,
-  options: {
-    attachmentParts?: any[];
-    hasAttachments?: boolean;
-    relevantInfo?: string;
-  } = {}
+  relevantInfo: string
 ): Promise<string> {
-  const { attachmentParts = [], hasAttachments = false, relevantInfo = '' } = options;
-
-  // Get stored information about the message author
-  const userInfo = await RememberService.getUserInformation(authorId);
-  const userInfoSection = userInfo
-    ? `\n\nInformations que tu connais sur ${authorDisplayName} :\n${userInfo}`
-    : '';
-
   // Add attachment context if present
-  const attachmentContext = hasAttachments
+  const attachmentContext = contents[contents.length - 1].parts?.some(part => part.inlineData)
     ? `\n\nL'utilisateur a joint des fichier(s) à son message.`
     : '';
 
@@ -503,6 +487,8 @@ export async function queryAIFilterRelevantInfo(
   contents: Content[], 
   completeInfoString: string
 ): Promise<string> {
+  //create a deepcopy of the contents to avoid modifying the original
+  const contentsCopy = JSON.parse(JSON.stringify(contents));
   const prompt = `
     Tu es un assistant intelligent qui aide à filtrer les informations pertinentes.
 
@@ -521,12 +507,12 @@ export async function queryAIFilterRelevantInfo(
     Réponds en français et de manière structurée.
   `;
 
-  contents.push({
+  contentsCopy.push({
     role: 'user' as const,
     parts: [{ text: prompt }],
   });
 
-  const response = await queryGeminiWithContents(contents, {
+  const response = await queryGeminiWithContents(contentsCopy, {
     model: "gemma-3-4b-it"
   });
   
