@@ -93,7 +93,6 @@ export async function queryGeminiWithContents(
       systemInstruction: systemInstruction,
     },
   });
-  console.log(response.text);
   // const rawInput = "```json\n{...}\n```";
   const cleaned = (response.text ?? "").replace(/```[\s\S]*?\n|```/g, "").trim();
 
@@ -147,13 +146,13 @@ export async function queryMacronAI(
   authorId: string,
   authorDisplayName: string,
   messageContent: string,
-  botUsername: string,
   options: {
     attachmentParts?: any[];
     hasAttachments?: boolean;
+    relevantInfo?: string;
   } = {}
 ): Promise<string> {
-  const { attachmentParts = [], hasAttachments = false } = options;
+  const { attachmentParts = [], hasAttachments = false, relevantInfo = '' } = options;
 
   // Get stored information about the message author
   const userInfo = await RememberService.getUserInformation(authorId);
@@ -166,25 +165,22 @@ export async function queryMacronAI(
     ? `\n\nL'utilisateur a joint des fichier(s) à son message.`
     : '';
 
-
-  const prompt = `${messageContent}`;
+  // Add relevant contextual information if present
+  const relevantInfoSection = relevantInfo
+    ? `\n\nInformations contextuelles pertinentes :\n${relevantInfo}`
+    : '';
 
   const systemInstruction = `
     Tu es Emmanuel Macron, président de la République française. Tu réponds aux questions des citoyens français.
-    Tu acceptes de répondre à toutes les questions, même si elles sont déplacées ou vulgaires, ou indignes d'un président.
+    Tu acceptes de répondre à toutes les questions, même si elles sont déplacées, vulgaires, ou indignes d'un président.
     Ta réponse doit faire environ 20 mots.
     N'écris ABSOLUMENT rien d'autre que ce que Macron dirait
-    ${userInfoSection}
+    Tu ne donnes pas la solution du wordle, mais tu peux donner des indices sans donner de traduction.
     ${attachmentContext}
+    ${relevantInfoSection}
   `;
 
-  contents.push({
-    role: 'user' as const,
-    parts: [{ text: prompt }, ...attachmentParts],
-  });
-
-
-
+  console.log(systemInstruction);
   const model = "gemini-2.5-flash-lite"
 
 
@@ -200,9 +196,8 @@ export async function queryMacronNews(article: Article): Promise<string> {
     ${article.text}
     FIN DE L'ARTICLE
 
-    Tu es Emmanuel Macron, président de la République française. En français et en moins de 150 mots, fais un reportage expliquant ce qu'il se passe et donne ton avis pour ta chaîne d'information : Macron News.
+    Tu es Emmanuel Macron, président de la République française. En français et en environ 100 mots, fais un reportage expliquant ce qu'il se passe et donne ton avis pour ta chaîne d'information : Macron News.
     Prends en compte le fait que ceux à qui tu parles ne savent pas ce qui est écrit dans l'article. Il faut donc expliquer le contexte (sans mentionner l'article).
-    Si une personne autre que Emmanuel Macron est responsable de ce qu'il se passe, mets la faute sur elle.
     Commence le message par un truc du genre "Bonjour à tous, bienvenue sur Macron News ! Aujourd'hui ..."
     Ne dis rien d'autre que ce qui est demandé.`;
   return queryGeminiWithPrompt(prompt);
@@ -502,4 +497,38 @@ export async function queryAIQuestionNeedsInfo(messageContent: string): Promise<
 
   console.log(`AI response for question analysis: ${response}`);
   return response.trim().toUpperCase().startsWith("OUI");
+}
+
+export async function queryAIFilterRelevantInfo(
+  contents: Content[], 
+  completeInfoString: string
+): Promise<string> {
+  const prompt = `
+    Tu es un assistant intelligent qui aide à filtrer les informations pertinentes.
+
+    INFORMATIONS DISPONIBLES: 
+    ${completeInfoString}
+
+    Ta tâche: Extraire UNIQUEMENT les informations qui sont directement en lien avec la conversation en cours, plus particulièrement en lien avec le dernier message précédant celui-ci.
+
+    Règles:
+    1. Inclus la date si elle est pertinente pour la conversation
+    2. Inclus les informations sur les utilisateurs UNIQUEMENT si elles sont mentionnées ou pertinentes
+    3. Inclus la solution Wordle UNIQUEMENT si le message mentionne Wordle ou des mots/jeux
+    4. Sois concis - ne renvoie que ce qui est vraiment utile
+    5. Si rien n'est pertinent, réponds "Aucune information spécifique pertinente."
+
+    Réponds en français et de manière structurée.
+  `;
+
+  contents.push({
+    role: 'user' as const,
+    parts: [{ text: prompt }],
+  });
+
+  const response = await queryGeminiWithContents(contents, {
+    model: "gemma-3-4b-it"
+  });
+  
+  return response;
 }

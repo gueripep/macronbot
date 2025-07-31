@@ -89,11 +89,22 @@ db.prepare(`
   CREATE TABLE IF NOT EXISTS user_info (
     user_id TEXT PRIMARY KEY,
     username TEXT NOT NULL,
+    real_name TEXT,
     information TEXT NOT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   )
 `).run();
+
+// Add real_name column if it doesn't exist (for existing tables)
+try {
+  db.prepare(`ALTER TABLE user_info ADD COLUMN real_name TEXT`).run();
+} catch (error: any) {
+  // Column already exists, ignore the error
+  if (!error.message?.includes('duplicate column name')) {
+    console.error('Error adding real_name column:', error);
+  }
+}
 
 // Insert initial money row if missing
 const row = db.prepare('SELECT id FROM money WHERE id = 1').get();

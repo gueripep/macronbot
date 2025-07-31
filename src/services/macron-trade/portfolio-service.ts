@@ -82,7 +82,7 @@ export class PortfolioService {
     const portfolioFields = await this.buildPortfolioFields(activeTransactions);
     embed.addFields(...portfolioFields);
 
-    const performanceSummary = this.buildPerformanceSummary(activeTransactions, invested);
+    const performanceSummary = await this.buildPerformanceSummary(activeTransactions, invested);
     embed.addFields(performanceSummary);
 
     const randomMessage = this.getRandomMacronMessage();
@@ -162,10 +162,14 @@ export class PortfolioService {
     return portfolioFields;
   }
 
-  private static buildPerformanceSummary(activeTransactions: any[], invested: number): any {
-    const totalOriginalInvestment = activeTransactions.reduce((sum: number, t: any) => sum + t.amount_invested, 0);
-    const totalPnL = invested - totalOriginalInvestment;
-    const totalPnLPercentage = totalOriginalInvestment > 0 ? (totalPnL / totalOriginalInvestment) * 100 : 0;
+  private static async buildPerformanceSummary(activeTransactions: any[], invested: number): Promise<any> {
+    const db = await this.getDB();
+    const money = db.prepare("SELECT available FROM money WHERE id = 1").get();
+    const totalPortfolioValue = money.available + invested;
+    
+    const originalInvestment = 10000; // Fixed starting amount
+    const totalPnL = totalPortfolioValue - originalInvestment;
+    const totalPnLPercentage = (totalPnL / originalInvestment) * 100;
     const totalEmoji = totalPnL >= 0 ? "🟢" : "🔴";
     const totalSign = totalPnL >= 0 ? "+" : "";
     
@@ -173,8 +177,8 @@ export class PortfolioService {
       name: "📊 Performance Totale",
       value: [
         `**P&L Total:** ${totalEmoji} ${totalSign}${totalPnLPercentage.toFixed(2)}% (${totalSign}$${totalPnL.toFixed(2)})`,
-        `**Investi Original:** $${totalOriginalInvestment.toFixed(2)}`,
-        `**Valeur Actuelle:** $${invested.toFixed(2)}`
+        `**Capital Initial:** $${originalInvestment.toFixed(2)}`,
+        `**Valeur Portfolio:** $${totalPortfolioValue.toFixed(2)}`
       ].join('\n'),
       inline: false
     };

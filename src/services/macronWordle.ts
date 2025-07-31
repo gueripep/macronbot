@@ -1,13 +1,37 @@
-import { DailyWordleService, LetterState, SolveResult, solveWordle } from "@gueripep/wordle-solver";
+import { DailyWordleService, LetterState, SolveResult } from "@gueripep/wordle-solver";
+import { DailyWordleData } from "@gueripep/wordle-solver/dist/services/daily-wordle.js";
 import { BaseMessageOptions, ChatInputCommandInteraction, TextChannel } from "discord.js";
 import { squeegeeChannelId } from "../config.js";
 
+export let wordleData = await DailyWordleService.getTodaysWordleData();
+
 export async function getWordleSolvingMessage(): Promise<BaseMessageOptions> {
-    const wordle = await DailyWordleService.getTodaysWordle();
-    const solution = wordle.solution.toUpperCase();
-    const solveResult = await solveWordle(solution, 6);
-    
+    const solveResult = await DailyWordleService.solveTodaysWordle()
+
     return await getWordleSolveResultMessage(solveResult);
+}
+
+/**
+ * Refresh today's Wordle data if needed and return it
+ * If today's date is different from the last updated date, it fetches new data.
+ * @return Promise<DailyWordleData> - Today's Wordle data
+ */
+export async function getTodaysWordleData(): Promise<DailyWordleData> {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const lastUpdated = wordleData.print_date;
+
+        // If today's date is different from the last updated date, refresh the data
+        if (today !== lastUpdated) {
+            console.log(`Refreshing Wordle data for ${today}`);
+            wordleData = await DailyWordleService.getTodaysWordleData();
+        } else {
+            console.log(`Wordle data is already up-to-date for ${today}`);
+        }
+    } catch (error) {
+        console.error('Error refreshing Wordle data:', error);
+    }
+    return wordleData;
 }
 
 /**
@@ -27,7 +51,7 @@ function getColorForLetterState(state: LetterState): string {
 }
 
 export async function getWordleSolveResultMessage(
-  solveResult: SolveResult
+    solveResult: SolveResult
 ): Promise<BaseMessageOptions> {
     const attempts = solveResult.attempts.map((attempt, index) => {
         // Create visual feedback with colored squares
@@ -35,19 +59,19 @@ export async function getWordleSolveResultMessage(
             const color = getColorForLetterState(letterFeedback.state);
             return color;
         }).join("");
-        
-        
+
+
         return `${visualFeedback}`;
     }).join('\n');
-    
+
     // Check if solved based on the last attempt having all CORRECT states
     const lastAttempt = solveResult.attempts[solveResult.attempts.length - 1];
     const isSolved = lastAttempt?.feedback.every(fb => fb.state === LetterState.CORRECT) || false;
-    
-    const resultText = isSolved 
+
+    const resultText = isSolved
         ? `Wordle résolu en ${solveResult.attempts.length} essais !`
         : `😔 Échec après ${solveResult.attempts.length} essais`;
-    
+
     return {
         content: `${resultText}\n${attempts}`,
         allowedMentions: { parse: [] } // Prevent mentions in the message
@@ -64,7 +88,7 @@ export async function handleWordleCommand(interaction: ChatInputCommandInteracti
 
 export async function sendDailyWordleMessage(client: any): Promise<void> {
     console.log("Daily Wordle message sent at:", new Date().toISOString());
-    
+
     const channel = client.channels.cache.get(squeegeeChannelId) as TextChannel;
     if (channel) {
         const message = await getWordleSolvingMessage();

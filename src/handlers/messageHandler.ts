@@ -2,7 +2,9 @@ import { Content } from "@google/genai";
 import { Message } from "discord.js";
 import fetch from "node-fetch";
 import { CHANNEL_IDS } from "../config.js";
-import { queryAIExtractUserInfo, queryMacronAI } from "../services/ollama.js";
+import db from "../dbSetup.js";
+import { getTodaysWordleData } from "../services/macronWordle.js";
+import { queryAIExtractUserInfo, queryAIFilterRelevantInfo, queryMacronAI } from "../services/ollama.js";
 import { RememberService } from "../services/remember-service.js";
 
 /**
@@ -49,6 +51,53 @@ async function processAttachments(attachments: Message['attachments']): Promise<
 }
 
 /**
+ * Filters relevant information for a user message
+ * @param msg - The Discord message to analyze
+ */
+async function getRelevantInformation(contents: Content[]): Promise<string> {
+  try {
+    // Extract all information about all users from the database
+    const stmt = db.prepare('SELECT user_id, username, real_name, information FROM user_info');
+    const allUsers = stmt.all();
+    
+    if (!allUsers || allUsers.length === 0) {
+      return "No user information stored yet.";
+    }
+    
+    // Format the user information into a readable string
+    const userInfoStrings = allUsers.map((user: any) => {
+      const realNamePart = user.real_name ? ` (${user.real_name})` : '';
+      return `${user.username}${realNamePart}: ${user.information}`;
+    });
+
+    // Get today's date and format it in French
+    const today = new Date().toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric', 
+      month: 'long',
+      day: 'numeric'
+    });
+
+
+    // Get today's wordle solution
+    const wordleSolution = (await getTodaysWordleData()).solution;
+
+    const completeInfoString = `Aujourd'hui nous sommes le ${today}.\n\nInformations connues sur les utilisateurs:\n${userInfoStrings.join('\n')}\n\nSolution du Wordle d'aujourd'hui: ${wordleSolution}`;
+    
+
+    // Use AI to filter only relevant information for this specific message
+    const relevantInfoString = await queryAIFilterRelevantInfo(contents, completeInfoString);
+    
+    return relevantInfoString; 
+  } catch (error) {
+    console.error('Error retrieving user information:', error);
+    return "Error retrieving user information.";
+  }
+}
+
+
+
+/**
  * Automatically analyzes a message to extract and remember user information
  * @param msg - The Discord message to analyze
  */
@@ -75,6 +124,7 @@ async function autoLearnFromMessage(msg: Message, cleanedMessageContent: string)
 
 export async function handleMessage(msg: Message, client: any): Promise<void> {
   if (msg.mentions.has(client.user!) && msg.author.id !== client.user?.id && !msg.author.bot) {
+    
     if (!CHANNEL_IDS.includes(msg.channel.id)) {
       await msg.reply("Je réponds que dans le channel de mon gars sûr, déso");
       return;
@@ -83,7 +133,6 @@ export async function handleMessage(msg: Message, client: any): Promise<void> {
     if (msg.channel.isTextBased() && 'sendTyping' in msg.channel) {
       await msg.channel.sendTyping();
     }
-
 
     const history = await msg.channel.messages.fetch({ limit: 10 });
     
@@ -129,13 +178,20 @@ export async function handleMessage(msg: Message, client: any): Promise<void> {
     const attachmentParts = await processAttachments(msg.attachments);
     const hasAttachments = msg.attachments.size > 0;
 
+    contents.push({
+      role: 'user' as const,
+      parts: [{ text: cleanedMessageContent }, ...attachmentParts],
+    });
+
+    const relevantInfo = await getRelevantInformation(contents);
+
+
     const response = await queryMacronAI(
       contents,
       msg.author.id,
       msg.author.displayName,
       cleanedMessageContent,
-      client.user?.username || "Emmanuel Macron",
-      { attachmentParts, hasAttachments }
+      { attachmentParts, hasAttachments, relevantInfo }
     );
     await msg.reply(response);
 

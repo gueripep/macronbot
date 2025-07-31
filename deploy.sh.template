@@ -15,6 +15,10 @@ echo "Installing dependencies"
 npm install
 echo "Compiling typescript"
 tsc
+echo "Deploying commands"
+npm run deploy-commands:dist
+echo "Setting up database"
+npm run db-setup:dist
 echo "Restarting app..."
 pm2 restart "{{APP_NAME}}"  # Replace {{APP_NAME}} with your PM2 app name
 
