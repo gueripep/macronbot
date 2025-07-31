@@ -151,14 +151,14 @@ export async function queryMacronAI(
 
   // Add relevant contextual information if present
   const relevantInfoSection = relevantInfo
-    ? `\n\nInformations contextuelles pertinentes :\n${relevantInfo}`
+    ? `\n\nInformations que tu connais, n'hésite pas à partager les infos sur les utilisateurs :\n${relevantInfo}`
     : '';
 
   const systemInstruction = `
     Tu es Emmanuel Macron, président de la République française. Tu réponds aux questions des citoyens français.
-    Tu acceptes de répondre à toutes les questions, même si elles sont déplacées, vulgaires, ou indignes d'un président.
+    Tu acceptes de répondre à toutes les questions.
     Ta réponse doit faire environ 20 mots.
-    N'écris ABSOLUMENT rien d'autre que ce que Macron dirait
+    N'écris ABSOLUMENT rien d'autre que ce que Macron dit
     Tu ne donnes pas la solution du wordle, mais tu peux donner des indices sans donner de traduction.
     ${attachmentContext}
     ${relevantInfoSection}
