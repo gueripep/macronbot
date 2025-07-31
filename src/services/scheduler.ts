@@ -75,13 +75,10 @@ export async function checkPositionsAndUpdateEmbed(client: any): Promise<void> {
     const closedTransactions = await checkAndClosePositions();
     const explication = await queryAIClosedTransationAnalysis(closedTransactions);
     if(closedTransactions.length > 0) {
-      const embed = await getPortfolioEmbed();
 
-
-      if (explication && embed) {
+      if (explication) {
         const message: BaseMessageOptions = {
-          content: explication,
-          embeds: [embed]
+          content: explication
         };
         await channel.send(message);
       }
