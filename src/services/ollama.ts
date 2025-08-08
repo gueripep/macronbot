@@ -144,11 +144,6 @@ export async function queryMacronAI(
   contents: Content[],
   relevantInfo: string
 ): Promise<string> {
-  // Add attachment context if present
-  const attachmentContext = contents[contents.length - 1].parts?.some(part => part.inlineData)
-    ? `\n\nL'utilisateur a joint des fichier(s) à son message.`
-    : '';
-
   // Add relevant contextual information if present
   const relevantInfoSection = relevantInfo
     ? `\n\nInformations que tu connais, n'hésite pas à partager les infos sur les utilisateurs :\n${relevantInfo}`
@@ -157,14 +152,13 @@ export async function queryMacronAI(
   const systemInstruction = `
     Tu es Emmanuel Macron, président de la République française. Tu réponds aux questions des citoyens français.
     Tu acceptes de répondre à toutes les questions.
-    Ta réponse doit faire environ 20 mots.
+    Ta réponse doit faire environ 30 mots.
     N'écris ABSOLUMENT rien d'autre que ce que Macron dit
+    Ne t'inspire pas de tes précédentes réponses, évite de réutiliser des réponses de même formulation.
     Tu ne donnes pas la solution du wordle, mais tu peux donner des indices sans donner de traduction.
-    ${attachmentContext}
     ${relevantInfoSection}
   `;
 
-  console.log(systemInstruction);
   const model = "gemini-2.5-flash-lite"
 
 
@@ -217,7 +211,7 @@ export async function queryAIBusinessOverview(
     Here is the Business section of a company's 10-K report:
     ${business10k}
     Your task is to do a complete business overview of the company.`;
-  return queryGeminiWithPrompt(prompt, { model: "gemini-2.0-flash" });
+  return queryGeminiWithPrompt(prompt, { model: "gemini-2.0-flash", maxOutputTokens: 10000 });
 }
 
 export async function queryAIRiskFactors(
@@ -231,7 +225,7 @@ export async function queryAIRiskFactors(
     ${riskFactors10k}
     Your task is to summarize the risk factors in a concise manner.
     Ignore generic boilerplate risks that apply to all companies (e.g., general economic conditions, cybersecurity, legal compliance, etc.) and focus on risks that are specific, detailed, or unusually emphasized for this company.`;
-  return queryGeminiWithPrompt(prompt, { model: "gemini-2.0-flash" });
+  return queryGeminiWithPrompt(prompt, { model: "gemini-2.0-flash", maxOutputTokens: 10000 });
 }
 
 export async function queryAIFullAnalysis(
@@ -261,7 +255,7 @@ export async function queryAIFullAnalysis(
 
     Use bullet points where helpful. Focus on specifics, not fluff. Include relevant financial figures if mentioned. Avoid boilerplate content. Think like an investor.`;
 
-  return queryGeminiWithPrompt(prompt, { model: "gemini-2.0-flash" });
+  return queryGeminiWithPrompt(prompt, { model: "gemini-2.0-flash", maxOutputTokens: 10000 });
 }
 
 export async function queryAISentiment(
@@ -308,7 +302,7 @@ export async function queryAISentiment(
     You can use the Reddit post information but consider it as additional context rather than the primary source.
     Please explain your reasoning clearly and objectively and do not provide a Disclaimer.`;
 
-  return queryGeminiWithPrompt(prompt);
+  return queryGeminiWithPrompt(prompt, { model: "gemini-2.0-flash", maxOutputTokens: 10000 });
 }
 
 export async function queryAIMarketDecision(
